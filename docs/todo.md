@@ -7,6 +7,7 @@
 - [x] docs/stock-core/plan/phase1~6 개발 계획 문서 업데이트
 - [x] build.gradle: postgresql → ojdbc11 드라이버 교체
 - [x] application.yaml: Oracle datasource / JPA dialect / port 8082 설정
+- [x] application.yaml: `defer-datasource-initialization: true` / `sql.init.mode: always` 추가
 - [x] StockServerApplication: @EnableScheduling 추가
 - [x] SecurityConfig: CSRF 비활성화, 내부 서버 전체 허용
 - [x] ApiResponse\<T\>: 공통 응답 포맷 `{ success, data, error, meta.traceId }`
@@ -46,18 +47,23 @@
 
 ---
 
-## 🔲 Phase 1 — 기본 도메인 구축
+### Phase 1 — 기본 도메인 구축 (진행 중)
 
-- [ ] Swagger `@OpenAPIDefinition` 설정 (제목 / 서버 URL)
-- [ ] `KisClient` 인터페이스 + `DummyKisClient` 구현체
-- [ ] `KisCurrentPriceResponse` (KIS envelope 구조 반영)
-- [ ] `KisMapper` (외부 DTO → 내부 도메인)
-- [ ] `StockMaster` Service / Controller
-- [ ] `GET /internal/v1/stocks/search?keyword=` 동작 확인
+- [x] Swagger `@OpenAPIDefinition` 설정 (제목 / 서버 URL) — `feat/#5-swagger-config`
+- [x] `KisCurrentPriceResponse` (KIS envelope 구조: rt_cd / msg_cd / output)
+- [x] `KisClient` 인터페이스 + `DummyKisClient` 구현체
+- [x] `KisMapper` (외부 DTO → BigDecimal 변환)
+- [x] `data.sql`: 종목 4개 시드 데이터 (Oracle MERGE INTO, 중복 방지)
+  - 005930 삼성전자 / 000660 SK하이닉스 / 035420 NAVER / 035720 카카오
+- [x] `DataInitializer`: 테스트 계좌 1개 자동 생성 (userId=1, 예수금 10,000,000)
+- [x] `StockService` / `StockController`
+- [x] `GET /internal/v1/stocks/search?keyword=` 동작 확인
+  - 검색 결과 없을 시 STOCK_001 (404) 반환
 - [ ] `SecuritiesAccount` Service / Controller
 - [ ] `GET /internal/v1/stocks/accounts` 동작 확인
 - [ ] `GET /internal/v1/stocks/cash-balance` 동작 확인
-- [ ] `DataInitializer`: 종목 4개 + 테스트 계좌 1개 시드 데이터
+- [ ] `X-Trace-Id` 헤더 처리 일관성 개선
+  - 현재 `StockController`는 `@RequestHeader` (헤더 없으면 400), `HealthController` / `GlobalExceptionHandler`는 `HttpServletRequest.getHeader()` (헤더 없으면 null) 혼용
 
 ---
 
@@ -68,7 +74,7 @@
 - [ ] `StockPriceScheduler`: 5초 주기 랜덤 시세 생성 (±3%)
 - [ ] `GET /internal/v1/stocks/{stockCode}/price` 동작 확인
 - [ ] `GET /internal/v1/stocks/{stockCode}/chart` 동작 확인
-- [ ] 에러 코드 STOCK_001 / STOCK_002 / STOCK_003 적용 확인
+- [ ] 에러 코드 STOCK_002 / STOCK_003 적용 확인
 
 ---
 
