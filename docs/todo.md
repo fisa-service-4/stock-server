@@ -1,30 +1,39 @@
 # stock-server TODO
 
+---
+
 ## ✅ 완료
 
 ### 개발 환경 / 공통
 
-- [x] docs/stock-core/plan/phase1~6 개발 계획 문서 업데이트
+- [x] docs/stock-core/plan/phase1~6 개발 계획 문서 작성
 - [x] build.gradle: postgresql → ojdbc11 드라이버 교체
-- [x] application.yaml: Oracle datasource / JPA dialect / port 8082 설정
-- [x] application.yaml: `defer-datasource-initialization: true` / `sql.init.mode: always` 추가
-- [x] StockServerApplication: @EnableScheduling 추가
-- [x] SecurityConfig: CSRF 비활성화, 내부 서버 전체 허용
-- [x] ApiResponse\<T\>: 공통 응답 포맷 `{ success, data, error, meta.traceId }`
-- [x] ErrorCode: error-code.md 기준 에러 코드 enum
-- [x] GlobalException / GlobalExceptionHandler
-- [x] HealthController: `GET /internal/v1/health` (Oracle DB 연결 확인)
+- [x] application.yaml: Oracle datasource / JPA dialect / port 8082 / 인코딩 설정
+- [x] application.yaml: `defer-datasource-initialization: true` / `sql.init.mode: always`
+- [x] `StockServerApplication`: `@EnableScheduling` / `@EnableJpaAuditing` 추가
+- [x] `SecurityConfig`: CSRF 비활성화, 내부 서버 전체 허용
+- [x] `ApiResponse<T>`: 공통 응답 포맷 `{ success, data, error, meta.traceId }`
+- [x] `ErrorCode`: error-code.md 기준 에러 코드 enum
+- [x] `GlobalException` / `GlobalExceptionHandler`
+- [x] `HealthController`: `GET /internal/v1/stock/health` (Oracle DB 연결 확인)
+- [x] `SwaggerConfig`: `@OpenAPIDefinition` 설정 (제목 / 서버 URL)
 - [x] Oracle 컨테이너 기동 확인 (docker-compose, XEPDB1)
+
+---
+
+### 공통 인프라 정비
+
+- [x] `HeaderConstants`: `X-Trace-Id` / `X-User-Id` 문자열 상수 중앙 관리
+- [x] 전체 컨트롤러 내부 헤더 `required=false` 통일 (헤더 누락 시 공통 에러 응답 보장)
+- [x] `GlobalExceptionHandler`: `MDC.get("traceId")` 기반 처리 통일, 미처리 예외 ERROR 로그 추가
+- [x] `TraceLoggingFilter`: X-Trace-Id MDC 저장, 없으면 UUID 생성(MDC 전용), 요청 시작/종료 INFO 로그
+- [x] `docs/logging/stock-logging-policy.md`: INFO/WARN/ERROR/DEBUG 레벨 기준, traceId 정책, 금지 로그 목록 문서화
 
 ---
 
 ### Phase 1 전 — DB 스키마 선생성
 
-> 명세가 완성되어 있으므로 엔티티 8개를 한 번에 작성하고 DB를 먼저 확정한다.
-> 이후 각 Phase에서 Service / Controller 레이어만 추가한다.
-
 - [x] `BaseEntity` (createdAt / updatedAt, JPA Auditing)
-- [x] `@EnableJpaAuditing` StockServerApplication 적용
 - [x] 도메인 Enum 생성
   - [x] `MarketType` (KOSPI / KOSDAQ / NASDAQ / NYSE / ETF)
   - [x] `AccountStatus` (ACTIVE / LOCKED / CLOSED)
@@ -39,32 +48,23 @@
 - [x] `StockPortfolioSnapshot` 엔티티 (STOCK_PORTFOLIO_SNAPSHOT)
 - [x] `OrderModificationHistory` 엔티티 (ORDER_MODIFICATION_HISTORY, CLOB)
 - [x] Repository 인터페이스 8개 생성
-- [x] 앱 기동 후 8개 테이블 생성 확인 (`SELECT table_name FROM user_tables`)
-- [x] UNIQUE 제약조건 생성 확인
-  - [x] `SECURITIES_ACCOUNT.account_number`
-  - [x] `STOCK_ORDER.idempotency_key`
-  - [x] `STOCK_HOLDING(securities_account_id, stock_code)`
+- [x] 앱 기동 후 8개 테이블 생성 확인
+- [x] UNIQUE 제약조건 확인 (account_number / idempotency_key / holding account+stock)
 
 ---
 
-### Phase 1 — 기본 도메인 구축 ✅
+### Phase 1 — 기본 도메인 구축
 
-- [x] Swagger `@OpenAPIDefinition` 설정 (제목 / 서버 URL) — `feat/#5-swagger-config`
-- [x] `KisCurrentPriceResponse` (KIS envelope 구조: rt_cd / msg_cd / output)
 - [x] `KisClient` 인터페이스 + `DummyKisClient` 구현체
+- [x] `KisCurrentPriceResponse` (rt_cd / msg_cd / output envelope 구조)
 - [x] `KisMapper` (외부 DTO → BigDecimal 변환)
-- [x] `data.sql`: 종목 4개 시드 데이터 (Oracle MERGE INTO, 중복 방지)
-  - 005930 삼성전자 / 000660 SK하이닉스 / 035420 NAVER / 035720 카카오
-- [x] `DataInitializer`: 테스트 계좌 1개 자동 생성 (userId=1, 예수금 10,000,000)
+- [x] `data.sql`: 종목 4개 시드 (삼성전자 / SK하이닉스 / NAVER / 카카오, Oracle MERGE INTO)
+- [x] `DataInitializer`: 테스트 계좌 1개 자동 생성 (userId=1, 예수금 10,000,000원)
 - [x] `StockService` / `StockController`
-- [x] `GET /internal/v1/stocks/search?keyword=` 동작 확인
-  - 검색 결과 없을 시 STOCK_001 (404) 반환
-- [x] `SecuritiesAccount` Service / Controller — `feat/#9-account-api`
-- [x] `GET /internal/v1/stocks/accounts` 동작 확인
-- [x] `GET /internal/v1/stocks/cash-balance` 동작 확인
-- [x] `X-Trace-Id` 헤더 처리 일관성 개선 — `feat/#7-stock-search-api`
-  - `HeaderConstants` 도입, 전체 컨트롤러 `required=false` 통일
-  - `GlobalExceptionHandler` MDC 기반 traceId 처리로 통일
+- [x] `GET /internal/v1/stocks/search?keyword=` — 검색 결과 없을 시 STOCK_001 (404)
+- [x] `AccountService` / `AccountController`
+- [x] `GET /internal/v1/stocks/accounts` — 계좌 없을 시 ACCOUNT_001 (404)
+- [x] `GET /internal/v1/stocks/cash-balance` — 계좌 없을 시 ACCOUNT_001 (404)
 
 ---
 
