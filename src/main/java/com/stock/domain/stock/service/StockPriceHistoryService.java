@@ -58,8 +58,7 @@ public class StockPriceHistoryService {
     if (stockPriceHistoryRepository
         .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
         .isPresent()) {
-      log.info(
-          "[StockPriceHistoryService] 초기 시세 이미 존재 skip stockCode={}", stockCode);
+      log.info("[StockPriceHistoryService] 초기 시세 이미 존재 skip stockCode={}", stockCode);
       return;
     }
 
@@ -76,7 +75,6 @@ public class StockPriceHistoryService {
             .collectedAt(LocalDateTime.now())
             .build());
 
-    log.info(
-        "[StockPriceHistoryService] 초기 시세 저장 stockCode={} price={}", stockCode, initialPrice);
+    log.info("[StockPriceHistoryService] 초기 시세 저장 stockCode={} price={}", stockCode, initialPrice);
   }
 }

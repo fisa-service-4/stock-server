@@ -37,8 +37,7 @@ public class StockPriceScheduler {
                         .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
                         .map(history -> history.getClosePrice())
                         .orElse(mockStockPriceProvider.getFallbackPrice(stockCode));
-                BigDecimal nextPrice =
-                    mockStockPriceProvider.getNextPrice(stockCode, prevClose);
+                BigDecimal nextPrice = mockStockPriceProvider.getNextPrice(stockCode, prevClose);
                 stockPriceHistoryService.recordTick(stockCode, prevClose, nextPrice);
               } catch (Exception e) {
                 log.error(
