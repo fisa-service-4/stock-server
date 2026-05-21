@@ -1,3 +1,19 @@
 spring:
   application:
     name: stock-server
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: finance
+    password: 1234
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8082
