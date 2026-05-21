@@ -1,7 +1,12 @@
 package com.stock.domain.stock.service;
 
+import com.stock.domain.stock.dto.response.StockPriceResponse;
+import com.stock.domain.stock.entity.StockMaster;
 import com.stock.domain.stock.entity.StockPriceHistory;
+import com.stock.domain.stock.repository.StockMasterRepository;
 import com.stock.domain.stock.repository.StockPriceHistoryRepository;
+import com.stock.global.exception.ErrorCode;
+import com.stock.global.exception.GlobalException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -9,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockPriceHistoryService {
 
   private final StockPriceHistoryRepository stockPriceHistoryRepository;
+  private final StockMasterRepository stockMasterRepository;
 
   @Transactional
   public void recordTick(String stockCode, BigDecimal prevClose, BigDecimal newClose) {
@@ -76,5 +83,33 @@ public class StockPriceHistoryService {
             .build());
 
     log.info("[StockPriceHistoryService] 초기 시세 저장 stockCode={} price={}", stockCode, initialPrice);
+  }
+
+  @Transactional(readOnly = true)
+  public StockPriceResponse getCurrentPrice(String stockCode) {
+    StockMaster master =
+        stockMasterRepository
+            .findById(stockCode)
+            .orElseThrow(
+                () -> {
+                  log.warn("[{}] 종목 없음 stockCode={}", MDC.get("traceId"), stockCode);
+                  return new GlobalException(ErrorCode.STOCK_001);
+                });
+
+    StockPriceHistory history =
+        stockPriceHistoryRepository
+            .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
+            .orElseThrow(
+                () -> {
+                  log.warn("[{}] 현재가 데이터 없음 stockCode={}", MDC.get("traceId"), stockCode);
+                  return new GlobalException(ErrorCode.STOCK_002);
+                });
+
+    log.info(
+        "[{}] 현재가 조회 성공 stockCode={} currentPrice={}",
+        MDC.get("traceId"),
+        stockCode,
+        history.getClosePrice());
+    return StockPriceResponse.of(master, history);
   }
 }
