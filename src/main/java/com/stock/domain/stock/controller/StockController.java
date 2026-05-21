@@ -1,5 +1,6 @@
 package com.stock.domain.stock.controller;
 
+import com.stock.domain.stock.dto.response.StockChartResponse;
 import com.stock.domain.stock.dto.response.StockPriceResponse;
 import com.stock.domain.stock.dto.response.StockSearchResponse;
 import com.stock.domain.stock.service.StockPriceHistoryService;
@@ -8,10 +9,12 @@ import com.stock.global.constants.HeaderConstants;
 import com.stock.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +52,28 @@ public class StockController {
       @PathVariable String stockCode) {
     log.info("[{}] [userId={}] 현재가 조회 stockCode={}", MDC.get("traceId"), userId, stockCode);
     StockPriceResponse result = stockPriceHistoryService.getCurrentPrice(stockCode);
+    return ResponseEntity.ok(ApiResponse.success(result, traceId));
+  }
+
+  @Operation(summary = "종목 차트 조회", description = "종목 코드와 기간 기준 시세 이력을 반환합니다.")
+  @GetMapping("/{stockCode}/chart")
+  public ResponseEntity<ApiResponse<StockChartResponse>> getChart(
+      @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
+      @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
+      @PathVariable String stockCode,
+      @RequestParam String interval,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+    log.info(
+        "[{}] [userId={}] 차트 조회 stockCode={} interval={} from={} to={}",
+        MDC.get("traceId"),
+        userId,
+        stockCode,
+        interval,
+        from,
+        to);
+    StockChartResponse result =
+        stockPriceHistoryService.getChart(stockCode, from.atStartOfDay(), to.atTime(23, 59, 59));
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }
