@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Health", description = "서버 및 DB 연결 상태 확인")
 @RestController
-@RequestMapping("/internal/v1/health")
+@RequestMapping("/internal/v1/stock/health")
 @RequiredArgsConstructor
 public class HealthController {
 
