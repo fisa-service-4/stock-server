@@ -50,8 +50,12 @@ stock-server/
 │  │  │  ├─ domain/          # 도메인별 비즈니스 로직
 │  │  │  │  ├─ stock/        # 종목 정보 관리
 │  │  │  │  ├─ order/        # 주문 처리
+│  │  │  │  ├─ account/      # 증권 계좌 / 예수금 관리
 │  │  │  │  ├─ holding/      # 보유 주식 관리
 │  │  │  │  └─ execution/    # 체결 내역 관리
+│  │  │  │
+│  │  │  ├─ external/        # 외부 증권 API 연동
+│  │  │  │  └─ kis/          # 한국투자 OpenAPI 연동
 │  │  │  │
 │  │  │  ├─ global/          # 공통 모듈
 │  │  │  │  ├─ config/       # 설정 클래스
