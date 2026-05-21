@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @Tag(name = "Stock", description = "종목 API")
 @RestController
 @RequestMapping("/internal/v1/stocks")
@@ -29,6 +32,7 @@ public class StockController {
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
       @RequestParam String keyword) {
+    log.info("[{}] [userId={}] 종목 검색 keyword={}", MDC.get("traceId"), userId, keyword);
     List<StockSearchResponse> result = stockService.search(keyword);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
