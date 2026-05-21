@@ -71,17 +71,19 @@ public class StockHolding extends BaseEntity {
 
   public void buy(int quantity, BigDecimal price) {
     BigDecimal newAmount = price.multiply(BigDecimal.valueOf(quantity));
-    BigDecimal totalAmount = this.averagePurchasePrice
-        .multiply(BigDecimal.valueOf(this.holdingQuantity))
-        .add(newAmount);
+    BigDecimal totalAmount =
+        this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity)).add(newAmount);
     int newQuantity = this.holdingQuantity + quantity;
-    this.averagePurchasePrice = totalAmount.divide(BigDecimal.valueOf(newQuantity), 2, java.math.RoundingMode.HALF_UP);
+    this.averagePurchasePrice =
+        totalAmount.divide(BigDecimal.valueOf(newQuantity), 2, java.math.RoundingMode.HALF_UP);
     this.holdingQuantity = newQuantity;
-    this.totalPurchaseAmount = this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity));
+    this.totalPurchaseAmount =
+        this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity));
   }
 
   public void sell(int quantity) {
     this.holdingQuantity -= quantity;
-    this.totalPurchaseAmount = this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity));
+    this.totalPurchaseAmount =
+        this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity));
   }
 }

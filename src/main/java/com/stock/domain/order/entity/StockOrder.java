@@ -100,7 +100,8 @@ public class StockOrder extends BaseEntity {
   }
 
   public void fill(int executedQuantity, BigDecimal executionPrice) {
-    this.filledQuantity = (this.filledQuantity == null ? 0 : this.filledQuantity) + executedQuantity;
+    this.filledQuantity =
+        (this.filledQuantity == null ? 0 : this.filledQuantity) + executedQuantity;
     this.remainingQuantity = this.orderQuantity - this.filledQuantity;
     this.averageExecutionPrice = executionPrice;
     this.orderStatus =
