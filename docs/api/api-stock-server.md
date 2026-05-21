@@ -709,7 +709,7 @@ Idempotency-Key: {uuid}
       "accountId": 1,
       "accountNumber": "123-45-67890",
       "brokerName": "삼성증권",
-      "accountType": "위탁"
+      "accountName": "위탁"
     }
   ],
   "meta": {
