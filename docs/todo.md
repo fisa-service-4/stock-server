@@ -17,20 +17,32 @@
 
 ---
 
-## 🔲 Phase 1 전 — DB 스키마 선생성
+### Phase 1 전 — DB 스키마 선생성
 
 > 명세가 완성되어 있으므로 엔티티 8개를 한 번에 작성하고 DB를 먼저 확정한다.
-> 이후 각 Phase에서 Repository / Service / Controller 레이어만 추가한다.
+> 이후 각 Phase에서 Service / Controller 레이어만 추가한다.
 
-- [ ] `StockMaster` 엔티티 (STOCK_MASTER)
-- [ ] `SecuritiesAccount` 엔티티 (SECURITIES_ACCOUNT)
-- [ ] `StockPriceHistory` 엔티티 (STOCK_PRICE_HISTORY)
-- [ ] `StockOrder` 엔티티 (STOCK_ORDER)
-- [ ] `StockExecution` 엔티티 (STOCK_EXECUTION)
-- [ ] `StockHolding` 엔티티 (STOCK_HOLDING)
-- [ ] `StockPortfolioSnapshot` 엔티티 (STOCK_PORTFOLIO_SNAPSHOT)
-- [ ] `OrderModificationHistory` 엔티티 (ORDER_MODIFICATION_HISTORY)
-- [ ] 앱 기동 후 8개 테이블 생성 확인 (`SELECT table_name FROM user_tables`)
+- [x] `BaseEntity` (createdAt / updatedAt, JPA Auditing)
+- [x] `@EnableJpaAuditing` StockServerApplication 적용
+- [x] 도메인 Enum 생성
+  - [x] `MarketType` (KOSPI / KOSDAQ / NASDAQ / NYSE / ETF)
+  - [x] `AccountStatus` (ACTIVE / LOCKED / CLOSED)
+  - [x] `OrderType` / `OrderMethod` / `OrderStatus` / `OrderedBy`
+  - [x] `ModificationType` / `ModifiedBy`
+- [x] `StockMaster` 엔티티 (STOCK_MASTER)
+- [x] `SecuritiesAccount` 엔티티 (SECURITIES_ACCOUNT)
+- [x] `StockPriceHistory` 엔티티 (STOCK_PRICE_HISTORY)
+- [x] `StockOrder` 엔티티 (STOCK_ORDER, idempotency_key UNIQUE)
+- [x] `StockExecution` 엔티티 (STOCK_EXECUTION)
+- [x] `StockHolding` 엔티티 (STOCK_HOLDING, UNIQUE account+stock)
+- [x] `StockPortfolioSnapshot` 엔티티 (STOCK_PORTFOLIO_SNAPSHOT)
+- [x] `OrderModificationHistory` 엔티티 (ORDER_MODIFICATION_HISTORY, CLOB)
+- [x] Repository 인터페이스 8개 생성
+- [x] 앱 기동 후 8개 테이블 생성 확인 (`SELECT table_name FROM user_tables`)
+- [x] UNIQUE 제약조건 생성 확인
+  - [x] `SECURITIES_ACCOUNT.account_number`
+  - [x] `STOCK_ORDER.idempotency_key`
+  - [x] `STOCK_HOLDING(securities_account_id, stock_code)`
 
 ---
 
@@ -40,9 +52,9 @@
 - [ ] `KisClient` 인터페이스 + `DummyKisClient` 구현체
 - [ ] `KisCurrentPriceResponse` (KIS envelope 구조 반영)
 - [ ] `KisMapper` (외부 DTO → 내부 도메인)
-- [ ] `StockMaster` Repository / Service / Controller
+- [ ] `StockMaster` Service / Controller
 - [ ] `GET /internal/v1/stocks/search?keyword=` 동작 확인
-- [ ] `SecuritiesAccount` Repository / Service / Controller
+- [ ] `SecuritiesAccount` Service / Controller
 - [ ] `GET /internal/v1/stocks/accounts` 동작 확인
 - [ ] `GET /internal/v1/stocks/cash-balance` 동작 확인
 - [ ] `DataInitializer`: 종목 4개 + 테스트 계좌 1개 시드 데이터
@@ -51,7 +63,7 @@
 
 ## 🔲 Phase 2 — 시세 시스템 구축
 
-- [ ] `StockPriceHistory` Repository / Service
+- [ ] `StockPriceHistory` Service
 - [ ] 초기 가격 시드 (앱 기동 시 종목별 1건 삽입)
 - [ ] `StockPriceScheduler`: 5초 주기 랜덤 시세 생성 (±3%)
 - [ ] `GET /internal/v1/stocks/{stockCode}/price` 동작 확인
@@ -62,7 +74,7 @@
 
 ## 🔲 Phase 3 — 주문 / 체결 엔진 구축
 
-- [ ] `StockOrder` Repository / Service / Controller
+- [ ] `StockOrder` Service / Controller
 - [ ] `Idempotency-Key` 헤더 처리 (중복 주문 방지)
 - [ ] `Pin-Token` 헤더 존재 검증
 - [ ] 매수 검증: `cash_balance >= quantity × price` (ORDER_001)
@@ -73,9 +85,8 @@
   - [ ] `StockHolding` upsert (매수: 평균단가 재계산 / 매도: 수량 감소)
   - [ ] `SecuritiesAccount.cashBalance` 갱신
   - [ ] `StockOrder` 상태 변경 (FILLED)
-- [ ] `StockExecution` Repository / Service
+- [ ] `StockExecution` Service
 - [ ] `GET /internal/v1/executions` 동작 확인
-- [ ] `OrderModificationHistory` Repository
 - [ ] `POST /internal/v1/orders/{orderId}/cancel` 동작 확인 (이력 저장 포함)
 - [ ] `GET /internal/v1/orders` / `GET /internal/v1/orders/{orderId}` 동작 확인
 - [ ] LIMIT 주문 조건 체결 동작 확인
@@ -84,10 +95,10 @@
 
 ## 🔲 Phase 4 — 보유종목 / 수익률 / 포트폴리오
 
-- [ ] `StockHolding` Repository / Service / Controller
+- [ ] `StockHolding` Service / Controller
 - [ ] `GET /internal/v1/holdings` (실시간 평가금액 계산) 동작 확인
 - [ ] `GET /internal/v1/holdings/returns` (totalReturnRate 실시간) 동작 확인
-- [ ] `StockPortfolioSnapshot` Repository / Service
+- [ ] `StockPortfolioSnapshot` Service
 - [ ] 포트폴리오 스냅샷 스케줄러 (일 1회)
 - [ ] `GET /internal/v1/portfolio` 동작 확인
 - [ ] 에러 코드 HOLDING_001 적용 확인
