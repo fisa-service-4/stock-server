@@ -68,14 +68,19 @@
 
 ---
 
-## 🔲 Phase 2 — 시세 시스템 구축
+## ✅ Phase 2 — 시세 시스템 구축
 
-- [ ] `StockPriceHistory` Service
-- [ ] 초기 가격 시드 (앱 기동 시 종목별 1건 삽입)
-- [ ] `StockPriceScheduler`: 5초 주기 랜덤 시세 생성 (±3%)
-- [ ] `GET /internal/v1/stocks/{stockCode}/price` 동작 확인
-- [ ] `GET /internal/v1/stocks/{stockCode}/chart` 동작 확인
-- [ ] 에러 코드 STOCK_002 / STOCK_003 적용 확인
+- [x] `application.yaml`: `stock.mock.enabled: true` / `stock.mock.tick-interval: 5000` 추가
+- [x] `MockPriceGenerator`: 순수 계산 클래스, ±3% 랜덤 변동률 적용
+- [x] `MockStockPriceProvider`: `@ConditionalOnProperty(stock.mock.enabled)`, fallback 기준가 Map, `getNextPrice()` / `getFallbackPrice()`
+- [x] `StockPriceHistoryService`: `recordTick()` / `initializeIfAbsent()` / `getCurrentPrice()` / `getChart()`
+- [x] `DataInitializer`: `MockStockPriceProvider` optional 주입, 앱 기동 시 종목별 초기 시세 1건 삽입
+- [x] `StockPriceScheduler`: `@ConditionalOnProperty`, `fixedDelayString` 5초 주기, 종목별 독립 try-catch
+- [x] `StockPriceResponse` DTO (currentPrice / changeRate / changeAmount / volume / updatedAt)
+- [x] `StockChartResponse` DTO (stockCode / candles[], Candle.from() 정적 팩토리)
+- [x] `GET /internal/v1/stocks/{stockCode}/price` 동작 확인
+- [x] `GET /internal/v1/stocks/{stockCode}/chart?interval=&from=&to=` 동작 확인
+- [x] 에러 코드 STOCK_001 / STOCK_002 / STOCK_003 적용 확인
 
 ---
 

@@ -1,5 +1,7 @@
 package com.stock.domain.stock.service;
 
+import com.stock.domain.stock.dto.response.StockChartResponse;
+import com.stock.domain.stock.dto.response.StockChartResponse.Candle;
 import com.stock.domain.stock.dto.response.StockPriceResponse;
 import com.stock.domain.stock.entity.StockMaster;
 import com.stock.domain.stock.entity.StockPriceHistory;
@@ -11,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,5 +114,32 @@ public class StockPriceHistoryService {
         stockCode,
         history.getClosePrice());
     return StockPriceResponse.of(master, history);
+  }
+
+  @Transactional(readOnly = true)
+  public StockChartResponse getChart(String stockCode, LocalDateTime from, LocalDateTime to) {
+    stockMasterRepository
+        .findById(stockCode)
+        .orElseThrow(
+            () -> {
+              log.warn("[{}] 차트 조회 종목 없음 stockCode={}", MDC.get("traceId"), stockCode);
+              return new GlobalException(ErrorCode.STOCK_001);
+            });
+
+    List<StockPriceHistory> histories =
+        stockPriceHistoryRepository.findByStockCodeAndCollectedAtBetweenOrderByCollectedAtAsc(
+            stockCode, from, to);
+
+    if (histories.isEmpty()) {
+      log.warn(
+          "[{}] 차트 데이터 없음 stockCode={} from={} to={}", MDC.get("traceId"), stockCode, from, to);
+      throw new GlobalException(ErrorCode.STOCK_003);
+    }
+
+    List<Candle> candles = histories.stream().map(Candle::from).toList();
+
+    log.info("[{}] 차트 조회 성공 stockCode={} count={}", MDC.get("traceId"), stockCode, candles.size());
+
+    return StockChartResponse.builder().stockCode(stockCode).candles(candles).build();
   }
 }
