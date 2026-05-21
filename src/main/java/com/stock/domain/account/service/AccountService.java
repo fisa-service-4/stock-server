@@ -39,14 +39,19 @@ public class AccountService {
   public CashBalanceResponse getCashBalance(Long userId) {
     return securitiesAccountRepository
         .findFirstByUserId(userId)
-        .map(account -> {
-          log.info("[{}] [userId={}] 예수금 조회 완료 accountId={}",
-              MDC.get("traceId"), userId, account.getSecuritiesAccountId());
-          return CashBalanceResponse.from(account);
-        })
-        .orElseThrow(() -> {
-          log.warn("[{}] [userId={}] 계좌 없음", MDC.get("traceId"), userId);
-          return new GlobalException(ErrorCode.ACCOUNT_001);
-        });
+        .map(
+            account -> {
+              log.info(
+                  "[{}] [userId={}] 예수금 조회 완료 accountId={}",
+                  MDC.get("traceId"),
+                  userId,
+                  account.getSecuritiesAccountId());
+              return CashBalanceResponse.from(account);
+            })
+        .orElseThrow(
+            () -> {
+              log.warn("[{}] [userId={}] 계좌 없음", MDC.get("traceId"), userId);
+              return new GlobalException(ErrorCode.ACCOUNT_001);
+            });
   }
 }
