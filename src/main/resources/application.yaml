@@ -31,3 +31,4 @@ server:
 stock:
   mock:
     enabled: true
+    tick-interval: 5000
