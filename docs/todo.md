@@ -47,7 +47,7 @@
 
 ---
 
-### Phase 1 — 기본 도메인 구축 (진행 중)
+### Phase 1 — 기본 도메인 구축 ✅
 
 - [x] Swagger `@OpenAPIDefinition` 설정 (제목 / 서버 URL) — `feat/#5-swagger-config`
 - [x] `KisCurrentPriceResponse` (KIS envelope 구조: rt_cd / msg_cd / output)
@@ -59,11 +59,12 @@
 - [x] `StockService` / `StockController`
 - [x] `GET /internal/v1/stocks/search?keyword=` 동작 확인
   - 검색 결과 없을 시 STOCK_001 (404) 반환
-- [ ] `SecuritiesAccount` Service / Controller
-- [ ] `GET /internal/v1/stocks/accounts` 동작 확인
-- [ ] `GET /internal/v1/stocks/cash-balance` 동작 확인
-- [ ] `X-Trace-Id` 헤더 처리 일관성 개선
-  - 현재 `StockController`는 `@RequestHeader` (헤더 없으면 400), `HealthController` / `GlobalExceptionHandler`는 `HttpServletRequest.getHeader()` (헤더 없으면 null) 혼용
+- [x] `SecuritiesAccount` Service / Controller — `feat/#9-account-api`
+- [x] `GET /internal/v1/stocks/accounts` 동작 확인
+- [x] `GET /internal/v1/stocks/cash-balance` 동작 확인
+- [x] `X-Trace-Id` 헤더 처리 일관성 개선 — `feat/#7-stock-search-api`
+  - `HeaderConstants` 도입, 전체 컨트롤러 `required=false` 통일
+  - `GlobalExceptionHandler` MDC 기반 traceId 처리로 통일
 
 ---
 
