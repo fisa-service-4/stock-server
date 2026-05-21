@@ -13,7 +13,7 @@ KIS DTO는 현재가 응답 구조(KisCurrentPriceResponse)만 우선 구현
 
 사전 조건 (Phase 1 시작 전 필수)
 
-- 패키지명: com.stock → com.fisa.stock 으로 이동
+- 패키지명: com.stock 유지 (변경 없음)
 - DB 드라이버: build.gradle에서 postgresql → ojdbc11 교체
 - application.yaml: Oracle datasource / JPA dialect / port 8082 구성
 - SecurityConfig: CSRF 비활성화, 모든 요청 허용 (내부 서버, JWT 처리 없음)
