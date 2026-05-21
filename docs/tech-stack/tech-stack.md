@@ -44,13 +44,14 @@
 
 ## Database
 
-| 기술         | 설명              | 버전  |
-|------------|-----------------|-----|
-| PostgreSQL | 운영 DB (RDS)     | 16  |
-| PostgreSQL | 분석 DB (EC2)     | 16  |
-| PostgreSQL | 로그 DB (EC2)     | 16  |
-| pgvector   | Vector DB (EC2) |
-| Redis      | 세션/캐시 (EC2)     | 7.2 |
+| 기술         | 설명                       | 버전     |
+|------------|--------------------------|--------|
+| PostgreSQL | 운영 DB (RDS)              | 16     |
+| PostgreSQL | 분석 DB (EC2)              | 16     |
+| PostgreSQL | 로그 DB (EC2)              | 16     |
+| pgvector   | Vector DB (EC2)          |
+| Redis      | 세션/캐시 (EC2)              | 7.2    |
+| OracleDB   | 은행/증권/카드/트랜잭션 DB (온프레미스) | XE 21c |
 
  
 ---
