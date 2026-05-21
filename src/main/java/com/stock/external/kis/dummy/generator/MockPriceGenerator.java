@@ -9,7 +9,11 @@ public class MockPriceGenerator {
 
   public BigDecimal generate(BigDecimal lastPrice) {
     double variationRate = Math.random() * 0.06 - 0.03;
-    BigDecimal multiplier = BigDecimal.ONE.add(new BigDecimal(variationRate));
-    return lastPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+
+    BigDecimal multiplier = BigDecimal.ONE.add(BigDecimal.valueOf(variationRate));
+
+    BigDecimal generatedPrice = lastPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+
+    return generatedPrice.max(BigDecimal.ONE);
   }
 }
