@@ -119,10 +119,11 @@ stock-server/
 
 ## 7. 참조 문서
 
-| 파일 | 언제 참조 |
-| --- | --- |
-| @docs/architecture-index.md | 시스템 구조 파악할 때 |
-| @docs/api/api-index.md | API 개발 시 |
-| @docs/db/db-index.md | DB 작업 시 |
-| @docs/convention/git-convention.md | 브랜치/커밋/PR 규칙 확인할 때 |
-| @docs/tech-stack/tech-stack.md | 기술 스택 확인할 때 |
+| 파일                                   | 언제 참조 |
+|--------------------------------------|  |
+| @docs/architecture-index.md          | 시스템 구조 파악할 때 |
+| @docs/api/api-index.md               | API 개발 시 |
+| @docs/db/db-index.md                 | DB 작업 시 |
+| @docs/convention/git-convention.md   | 브랜치/커밋/PR 규칙 확인할 때 |
+| @docs/tech-stack/tech-stack.md       | 기술 스택 확인할 때 |
+| @docs/stock-core/stock-core-index.md | 증권 코어 서버 구체적 설명이 필요할 때 |
