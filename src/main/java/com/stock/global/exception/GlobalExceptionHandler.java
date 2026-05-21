@@ -39,8 +39,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleException(
       Exception e, HttpServletRequest request) {
     String traceId = MDC.get("traceId");
-    log.error("[{}] 처리되지 않은 예외 발생 uri={} message={}", traceId,
-        request.getRequestURI(), e.getMessage(), e);
+    log.error(
+        "[{}] 처리되지 않은 예외 발생 uri={} message={}",
+        traceId,
+        request.getRequestURI(),
+        e.getMessage(),
+        e);
     return ResponseEntity.internalServerError()
         .body(ApiResponse.error("INTERNAL_ERROR", e.getMessage(), traceId));
   }

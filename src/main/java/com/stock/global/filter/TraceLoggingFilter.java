@@ -34,7 +34,11 @@ public class TraceLoggingFilter extends OncePerRequestFilter {
     try {
       filterChain.doFilter(request, response);
     } finally {
-      log.info("[{}] {} {} → {}", traceId, request.getMethod(), request.getRequestURI(),
+      log.info(
+          "[{}] {} {} → {}",
+          traceId,
+          request.getMethod(),
+          request.getRequestURI(),
           response.getStatus());
       MDC.clear();
     }
