@@ -6,7 +6,7 @@ services:
     container_name: oracle
     restart: always
     ports:
-      - "1521:1521"
+      - "1522:1521"
     environment:
       ORACLE_PASSWORD: 1234
       APP_USER: finance
