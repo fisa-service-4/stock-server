@@ -27,3 +27,7 @@ server:
       charset: UTF-8
       force: true
       enabled: true
+
+stock:
+  mock:
+    enabled: true
