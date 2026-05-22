@@ -121,8 +121,10 @@ stock-server/
 
 | 파일                                   | 언제 참조 |
 |--------------------------------------|  |
+| @docs/api-compact.md                 | API 개발 시 (stock-server 전용 요약, 매번 이것만 읽을 것) |
+| @docs/todo.md                        | 현재 개발 진행 상황 및 남은 작업 확인할 때 |
 | @docs/architecture-index.md          | 시스템 구조 파악할 때 |
-| @docs/api/api-index.md               | API 개발 시 |
+| @docs/api/api-index.md               | 전체 서버 API 원본 확인이 필요할 때 |
 | @docs/db/db-index.md                 | DB 작업 시 |
 | @docs/convention/git-convention.md   | 브랜치/커밋/PR 규칙 확인할 때 |
 | @docs/tech-stack/tech-stack.md       | 기술 스택 확인할 때 |
