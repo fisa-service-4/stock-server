@@ -44,7 +44,7 @@ public class AccountController {
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
       @PathVariable Long accountId) {
     log.info("[{}] [userId={}] 예수금 조회 요청 accountId={}", MDC.get("traceId"), userId, accountId);
-    CashBalanceResponse result = accountService.getCashBalance(accountId);
+    CashBalanceResponse result = accountService.getCashBalance(userId, accountId);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }
