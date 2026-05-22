@@ -27,10 +27,10 @@ Phase 3 진행에 Phase 5가 필요하지 않음
 3-1. STOCK_ORDER 구축
 
 API:
-POST /internal/v1/orders
-GET /internal/v1/orders
-GET /internal/v1/orders/{orderId}
-POST /internal/v1/orders/{orderId}/cancel
+POST /internal/v1/stock/accounts/{accountId}/orders
+GET  /internal/v1/stock/accounts/{accountId}/orders
+GET  /internal/v1/stock/orders/{orderId}
+POST /internal/v1/stock/orders/{orderId}/cancel
 
 ────────────────────────────────────
 
@@ -57,8 +57,10 @@ Phase 3에서는 헤더 존재 여부만 검증 (non-null, non-empty)
 
 1. Pin-Token 헤더 존재 확인
 2. Idempotency-Key 중복 확인
-3. 계좌 조회 (X-User-Id 기준)
-4. 주문 검증
+3. AccountValidator.validateOwner(userId, accountId) 호출
+   → 계좌 존재 여부(ACCOUNT_001) + 소유자 검증(ACCOUNT_002) + 엔티티 반환
+   → 이미 구현 완료: domain/account/validator/AccountValidator.java
+4. 주문 검증 (반환된 account.getCashBalance() 직접 사용)
 5. 주문 생성 (REQUESTED)
 6. 체결 엔진 호출 (@Transactional)
 
@@ -150,7 +152,7 @@ cash_balance += execution_amount
 
 3-12. ORDER_MODIFICATION_HISTORY 구축
 
-POST /internal/v1/orders/{orderId}/cancel 처리 시:
+POST /internal/v1/stock/orders/{orderId}/cancel 처리 시:
 
 ORDER_MODIFICATION_HISTORY INSERT:
 - modification_type = CANCEL
@@ -165,26 +167,30 @@ Oracle에서 JSON → CLOB 타입 사용
 3-13. STOCK_EXECUTION 조회 API 구현
 
 API:
-GET /internal/v1/executions
+GET /internal/v1/stock/accounts/{accountId}/executions
 
 Query Parameter:
 - stockCode (선택)
-- from / to (선택)
+- fromDate / toDate (선택, YYYY-MM-DD)
 - page / size
 
 ────────────────────────────────────
 
 PHASE 3 완료 기준:
 
-✅ STOCK_ORDER 생성 / 조회 / 취소 동작
-✅ Idempotency-Key 중복 주문 방지 동작
-✅ Pin-Token 헤더 존재 검증 동작
-✅ 매수 검증: cash_balance 부족 시 ORDER_001 반환
-✅ 매도 검증: holding_quantity 부족 시 ORDER_002 반환
-✅ MARKET 주문 즉시 체결 동작
-✅ LIMIT 주문 조건 체결 동작
-✅ STOCK_EXECUTION 생성 확인
-✅ STOCK_HOLDING upsert (매수 평균단가 / 매도 수량 감소) 동작
-✅ cash_balance 갱신 확인
-✅ ORDER_MODIFICATION_HISTORY 취소 이력 저장 확인
-✅ GET /internal/v1/executions 조회 동작
+[ ] STOCK_ORDER 생성 동작: POST /internal/v1/stock/accounts/{accountId}/orders
+[ ] STOCK_ORDER 목록 조회 동작: GET /internal/v1/stock/accounts/{accountId}/orders
+[ ] STOCK_ORDER 상세 조회 동작: GET /internal/v1/stock/orders/{orderId}
+[ ] STOCK_ORDER 취소 동작: POST /internal/v1/stock/orders/{orderId}/cancel
+[ ] Idempotency-Key 중복 주문 방지 동작
+[ ] Pin-Token 헤더 존재 검증 동작
+[ ] AccountValidator.validateOwner() 적용 (이미 구현됨, 주입만 하면 됨)
+[ ] 매수 검증: cash_balance 부족 시 ORDER_001 반환
+[ ] 매도 검증: holding_quantity 부족 시 ORDER_002 반환
+[ ] MARKET 주문 즉시 체결 동작
+[ ] LIMIT 주문 조건 체결 동작
+[ ] STOCK_EXECUTION 생성 확인
+[ ] STOCK_HOLDING upsert (매수 평균단가 / 매도 수량 감소) 동작
+[ ] cash_balance 갱신 확인
+[ ] ORDER_MODIFICATION_HISTORY 취소 이력 저장 확인
+[ ] 체결 조회 동작: GET /internal/v1/stock/accounts/{accountId}/executions

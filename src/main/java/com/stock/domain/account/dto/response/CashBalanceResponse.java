@@ -10,14 +10,14 @@ import lombok.Getter;
 public class CashBalanceResponse {
 
   private Long accountId;
-  private BigDecimal availableCash;
-  private BigDecimal withdrawableAmount;
+  private BigDecimal cashBalance;
+  private BigDecimal availableBalance;
 
   public static CashBalanceResponse from(SecuritiesAccount account) {
     return CashBalanceResponse.builder()
         .accountId(account.getSecuritiesAccountId())
-        .availableCash(account.getCashBalance())
-        .withdrawableAmount(account.getWithdrawableBalance())
+        .cashBalance(account.getCashBalance())
+        .availableBalance(account.getWithdrawableBalance())
         .build();
   }
 }

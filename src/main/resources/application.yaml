@@ -2,7 +2,7 @@ spring:
   application:
     name: stock-server
   datasource:
-    url: jdbc:oracle:thin:@localhost:1522/XEPDB1
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
     username: finance
     password: 1234
     driver-class-name: oracle.jdbc.OracleDriver

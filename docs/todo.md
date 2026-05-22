@@ -61,14 +61,14 @@
 - [x] `data.sql`: 종목 4개 시드 (삼성전자 / SK하이닉스 / NAVER / 카카오, Oracle MERGE INTO)
 - [x] `DataInitializer`: 테스트 계좌 1개 자동 생성 (userId=1, 예수금 10,000,000원)
 - [x] `StockService` / `StockController`
-- [x] `GET /internal/v1/stocks/search?keyword=` — 검색 결과 없을 시 STOCK_001 (404)
+- [x] `GET /internal/v1/stock/search?keyword=` — 검색 결과 없을 시 STOCK_001 (404)
 - [x] `AccountService` / `AccountController`
-- [x] `GET /internal/v1/stocks/accounts` — 계좌 없을 시 ACCOUNT_001 (404)
-- [x] `GET /internal/v1/stocks/cash-balance` — 계좌 없을 시 ACCOUNT_001 (404)
+- [x] `GET /internal/v1/stock/accounts` — 계좌 없을 시 ACCOUNT_001 (404)
+- [x] `GET /internal/v1/stock/accounts/{accountId}/cash-balance` — 계좌 없을 시 ACCOUNT_001 (404)
 
 ---
 
-## ✅ Phase 2 — 시세 시스템 구축
+### Phase 2 — 시세 시스템 구축
 
 - [x] `application.yaml`: `stock.mock.enabled: true` / `stock.mock.tick-interval: 5000` 추가
 - [x] `MockPriceGenerator`: 순수 계산 클래스, ±3% 랜덤 변동률 적용
@@ -77,42 +77,61 @@
 - [x] `DataInitializer`: `MockStockPriceProvider` optional 주입, 앱 기동 시 종목별 초기 시세 1건 삽입
 - [x] `StockPriceScheduler`: `@ConditionalOnProperty`, `fixedDelayString` 5초 주기, 종목별 독립 try-catch
 - [x] `StockPriceResponse` DTO (currentPrice / changeRate / changeAmount / volume / updatedAt)
-- [x] `StockChartResponse` DTO (stockCode / candles[], Candle.from() 정적 팩토리)
-- [x] `GET /internal/v1/stocks/{stockCode}/price` 동작 확인
-- [x] `GET /internal/v1/stocks/{stockCode}/chart?interval=&from=&to=` 동작 확인
+- [x] `StockChartResponse` DTO (content[], CandleItem.from() 정적 팩토리)
+- [x] `GET /internal/v1/stock/{stockCode}/price` 동작 확인
+- [x] `GET /internal/v1/stock/{stockCode}/charts?interval=&fromDate=&toDate=` 동작 확인
 - [x] 에러 코드 STOCK_001 / STOCK_002 / STOCK_003 적용 확인
+
+---
+
+### Refactor #19 — API 명세 정합성 정비
+
+- [x] `docs/api-compact.md` 생성 (stock-server 전용 API 요약, 매 세션 전체 API 문서 재독 불필요)
+- [x] `CLAUDE.md` 참조 문서 섹션에 `api-compact.md` / `todo.md` 추가
+- [x] URL 단수형 통일: `/internal/v1/stocks` → `/internal/v1/stock` (StockController / AccountController)
+- [x] 차트 경로 수정: `/{stockCode}/chart` → `/{stockCode}/charts`
+- [x] 차트 파라미터 수정: `from` / `to` → `fromDate` / `toDate`
+- [x] 예수금 경로 수정: `/cash-balance` → `/accounts/{accountId}/cash-balance`
+- [x] `StockSearchResponse`: `currentPrice` / `changeRate` 필드 추가
+- [x] `StockChartResponse`: `stockCode` 제거, `candles` → `content`, `timestamp(LocalDateTime)` → `date(LocalDate)`
+- [x] `AccountResponse`: `brokerName` → `bankCode`
+- [x] `CashBalanceResponse`: `availableCash` → `cashBalance`, `withdrawableAmount` → `availableBalance`
+- [x] `AccountValidator` 생성 (`domain/account/validator/`) — `validateOwner(userId, accountId)` : 존재(ACCOUNT_001) + 소유자(ACCOUNT_002) 검증 후 엔티티 반환
+- [x] `AccountService.getCashBalance`: `AccountValidator` 적용, 시그니처 `(userId, accountId)`로 변경
 
 ---
 
 ## 🔲 Phase 3 — 주문 / 체결 엔진 구축
 
-- [ ] `StockOrder` Service / Controller
-- [ ] `Idempotency-Key` 헤더 처리 (중복 주문 방지)
-- [ ] `Pin-Token` 헤더 존재 검증
-- [ ] 매수 검증: `cash_balance >= quantity × price` (ORDER_001)
-- [ ] 매도 검증: `holding_quantity >= quantity` (ORDER_002)
-- [ ] `POST /internal/v1/orders` 동작 확인
+- [ ] `OrderService` / `OrderController`
+- [ ] `Pin-Token` 헤더 존재 검증 (non-null, non-empty)
+- [ ] `Idempotency-Key` 헤더 처리 (동일 키 재요청 시 기존 주문 반환)
+- [ ] `AccountValidator.validateOwner()` 적용 (계좌 소유자 확인, Phase 3 전 완료됨)
+- [ ] 매수 검증: `cashBalance >= quantity × price` → ORDER_001
+- [ ] 매도 검증: `holdingQuantity >= quantity` → ORDER_002
+- [ ] `POST /internal/v1/stock/accounts/{accountId}/orders` 동작 확인
 - [ ] 체결 엔진 `@Transactional` 단일 처리:
   - [ ] `StockExecution` 생성
   - [ ] `StockHolding` upsert (매수: 평균단가 재계산 / 매도: 수량 감소)
   - [ ] `SecuritiesAccount.cashBalance` 갱신
   - [ ] `StockOrder` 상태 변경 (FILLED)
-- [ ] `StockExecution` Service
-- [ ] `GET /internal/v1/executions` 동작 확인
-- [ ] `POST /internal/v1/orders/{orderId}/cancel` 동작 확인 (이력 저장 포함)
-- [ ] `GET /internal/v1/orders` / `GET /internal/v1/orders/{orderId}` 동작 확인
-- [ ] LIMIT 주문 조건 체결 동작 확인
+- [ ] MARKET 주문: 현재가 즉시 체결
+- [ ] LIMIT 주문: 조건 충족 시 즉시 체결, 미충족 시 REQUESTED 유지
+- [ ] `ExecutionService`
+- [ ] `GET /internal/v1/stock/accounts/{accountId}/executions` 동작 확인
+- [ ] `POST /internal/v1/stock/orders/{orderId}/cancel` 동작 확인 (`OrderModificationHistory` 저장 포함)
+- [ ] `GET /internal/v1/stock/accounts/{accountId}/orders` 동작 확인
+- [ ] `GET /internal/v1/stock/orders/{orderId}` 동작 확인
 
 ---
 
 ## 🔲 Phase 4 — 보유종목 / 수익률 / 포트폴리오
 
-- [ ] `StockHolding` Service / Controller
-- [ ] `GET /internal/v1/holdings` (실시간 평가금액 계산) 동작 확인
-- [ ] `GET /internal/v1/holdings/returns` (totalReturnRate 실시간) 동작 확인
+- [ ] `HoldingService` / `HoldingController`
+- [ ] `GET /internal/v1/stock/accounts/{accountId}/holdings` (실시간 평가금액 계산) 동작 확인
+- [ ] `GET /internal/v1/stock/accounts/{accountId}/returns` (totalReturnRate 실시간) 동작 확인
 - [ ] `StockPortfolioSnapshot` Service
 - [ ] 포트폴리오 스냅샷 스케줄러 (일 1회)
-- [ ] `GET /internal/v1/portfolio` 동작 확인
 - [ ] 에러 코드 HOLDING_001 적용 확인
 
 ---
@@ -121,8 +140,8 @@
 
 - [ ] build.gradle: `spring-kafka` 의존성 추가
 - [ ] application.yaml: Kafka bootstrap-servers 설정
-- [ ] `POST /internal/v1/cash/deposit` 동작 확인
-- [ ] `POST /internal/v1/cash/withdraw` 동작 확인 (잔액 부족 검증 포함)
+- [ ] `POST /internal/v1/stock/cash/deposit` 동작 확인
+- [ ] `POST /internal/v1/stock/cash/withdraw` 동작 확인 (잔액 부족 검증 포함)
 - [ ] Kafka 이벤트 발행 확인 (kafka-ui):
   - [ ] `stock.cash.deposit.completed`
   - [ ] `stock.cash.deposit.failed`

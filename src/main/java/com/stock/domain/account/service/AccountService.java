@@ -3,6 +3,7 @@ package com.stock.domain.account.service;
 import com.stock.domain.account.dto.response.AccountResponse;
 import com.stock.domain.account.dto.response.CashBalanceResponse;
 import com.stock.domain.account.repository.SecuritiesAccountRepository;
+import com.stock.domain.account.validator.AccountValidator;
 import com.stock.global.exception.ErrorCode;
 import com.stock.global.exception.GlobalException;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountService {
 
   private final SecuritiesAccountRepository securitiesAccountRepository;
+  private final AccountValidator accountValidator;
 
   @Transactional(readOnly = true)
   public List<AccountResponse> getAccounts(Long userId) {
@@ -36,22 +38,9 @@ public class AccountService {
   }
 
   @Transactional(readOnly = true)
-  public CashBalanceResponse getCashBalance(Long userId) {
-    return securitiesAccountRepository
-        .findFirstByUserId(userId)
-        .map(
-            account -> {
-              log.info(
-                  "[{}] [userId={}] 예수금 조회 완료 accountId={}",
-                  MDC.get("traceId"),
-                  userId,
-                  account.getSecuritiesAccountId());
-              return CashBalanceResponse.from(account);
-            })
-        .orElseThrow(
-            () -> {
-              log.warn("[{}] [userId={}] 계좌 없음", MDC.get("traceId"), userId);
-              return new GlobalException(ErrorCode.ACCOUNT_001);
-            });
+  public CashBalanceResponse getCashBalance(Long userId, Long accountId) {
+    var account = accountValidator.validateOwner(userId, accountId);
+    log.info("[{}] 예수금 조회 완료 accountId={}", MDC.get("traceId"), accountId);
+    return CashBalanceResponse.from(account);
   }
 }

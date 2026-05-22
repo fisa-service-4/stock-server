@@ -10,15 +10,15 @@ public class AccountResponse {
 
   private Long accountId;
   private String accountNumber;
-  private String brokerName;
   private String accountName;
+  private String bankCode;
 
   public static AccountResponse from(SecuritiesAccount account) {
     return AccountResponse.builder()
         .accountId(account.getSecuritiesAccountId())
         .accountNumber(account.getAccountNumber())
-        .brokerName(account.getBrokerCode())
         .accountName(account.getAccountName())
+        .bankCode(account.getBrokerCode())
         .build();
   }
 }

@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Tag(name = "Account", description = "증권 계좌 API")
 @RestController
-@RequestMapping("/internal/v1/stocks")
+@RequestMapping("/internal/v1/stock")
 @RequiredArgsConstructor
 public class AccountController {
 
@@ -36,13 +37,14 @@ public class AccountController {
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 
-  @Operation(summary = "예수금 조회", description = "사용자의 예수금 및 출금 가능 금액을 조회합니다.")
-  @GetMapping("/cash-balance")
+  @Operation(summary = "예수금 조회", description = "증권 계좌의 예수금 및 출금 가능 금액을 조회합니다.")
+  @GetMapping("/accounts/{accountId}/cash-balance")
   public ResponseEntity<ApiResponse<CashBalanceResponse>> getCashBalance(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
-      @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId) {
-    log.info("[{}] [userId={}] 예수금 조회 요청", MDC.get("traceId"), userId);
-    CashBalanceResponse result = accountService.getCashBalance(userId);
+      @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
+      @PathVariable Long accountId) {
+    log.info("[{}] [userId={}] 예수금 조회 요청 accountId={}", MDC.get("traceId"), userId, accountId);
+    CashBalanceResponse result = accountService.getCashBalance(userId, accountId);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }

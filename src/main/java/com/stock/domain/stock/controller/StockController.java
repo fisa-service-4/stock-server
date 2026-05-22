@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @Tag(name = "Stock", description = "종목 API")
 @RestController
-@RequestMapping("/internal/v1/stocks")
+@RequestMapping("/internal/v1/stock")
 @RequiredArgsConstructor
 public class StockController {
 
@@ -56,24 +56,25 @@ public class StockController {
   }
 
   @Operation(summary = "종목 차트 조회", description = "종목 코드와 기간 기준 시세 이력을 반환합니다.")
-  @GetMapping("/{stockCode}/chart")
+  @GetMapping("/{stockCode}/charts")
   public ResponseEntity<ApiResponse<StockChartResponse>> getChart(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
       @PathVariable String stockCode,
       @RequestParam String interval,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
     log.info(
-        "[{}] [userId={}] 차트 조회 stockCode={} interval={} from={} to={}",
+        "[{}] [userId={}] 차트 조회 stockCode={} interval={} fromDate={} toDate={}",
         MDC.get("traceId"),
         userId,
         stockCode,
         interval,
-        from,
-        to);
+        fromDate,
+        toDate);
     StockChartResponse result =
-        stockPriceHistoryService.getChart(stockCode, from.atStartOfDay(), to.atTime(23, 59, 59));
+        stockPriceHistoryService.getChart(
+            stockCode, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }
