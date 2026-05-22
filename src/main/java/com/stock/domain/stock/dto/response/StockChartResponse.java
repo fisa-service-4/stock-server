@@ -2,7 +2,7 @@ package com.stock.domain.stock.dto.response;
 
 import com.stock.domain.stock.entity.StockPriceHistory;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,23 +11,22 @@ import lombok.Getter;
 @Builder
 public class StockChartResponse {
 
-  private String stockCode;
-  private List<Candle> candles;
+  private List<CandleItem> content;
 
   @Getter
   @Builder
-  public static class Candle {
+  public static class CandleItem {
 
-    private LocalDateTime timestamp;
+    private LocalDate date;
     private BigDecimal open;
     private BigDecimal high;
     private BigDecimal low;
     private BigDecimal close;
     private Long volume;
 
-    public static Candle from(StockPriceHistory history) {
-      return Candle.builder()
-          .timestamp(history.getCollectedAt())
+    public static CandleItem from(StockPriceHistory history) {
+      return CandleItem.builder()
+          .date(history.getTradedDate())
           .open(history.getOpenPrice())
           .high(history.getHighPrice())
           .low(history.getLowPrice())

@@ -1,7 +1,7 @@
 package com.stock.domain.stock.service;
 
 import com.stock.domain.stock.dto.response.StockChartResponse;
-import com.stock.domain.stock.dto.response.StockChartResponse.Candle;
+import com.stock.domain.stock.dto.response.StockChartResponse.CandleItem;
 import com.stock.domain.stock.dto.response.StockPriceResponse;
 import com.stock.domain.stock.entity.StockMaster;
 import com.stock.domain.stock.entity.StockPriceHistory;
@@ -136,10 +136,10 @@ public class StockPriceHistoryService {
       throw new GlobalException(ErrorCode.STOCK_003);
     }
 
-    List<Candle> candles = histories.stream().map(Candle::from).toList();
+    List<CandleItem> content = histories.stream().map(CandleItem::from).toList();
 
-    log.info("[{}] 차트 조회 성공 stockCode={} count={}", MDC.get("traceId"), stockCode, candles.size());
+    log.info("[{}] 차트 조회 성공 stockCode={} count={}", MDC.get("traceId"), stockCode, content.size());
 
-    return StockChartResponse.builder().stockCode(stockCode).candles(candles).build();
+    return StockChartResponse.builder().content(content).build();
   }
 }
