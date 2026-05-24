@@ -176,21 +176,30 @@ Query Parameter:
 
 ────────────────────────────────────
 
+────────────────────────────────────
+
+Issue 구성:
+
+Issue #21: 주문 생성/즉시 체결 엔진/취소 (feat/#21-order-command-engine) ← 완료
+Issue #22: 주문/체결 조회 (feat/#22-order-and-execution-query) ← 미완료
+
+────────────────────────────────────
+
 PHASE 3 완료 기준:
 
-[ ] STOCK_ORDER 생성 동작: POST /internal/v1/stock/accounts/{accountId}/orders
+[x] STOCK_ORDER 생성 동작: POST /internal/v1/stock/accounts/{accountId}/orders
 [ ] STOCK_ORDER 목록 조회 동작: GET /internal/v1/stock/accounts/{accountId}/orders
 [ ] STOCK_ORDER 상세 조회 동작: GET /internal/v1/stock/orders/{orderId}
-[ ] STOCK_ORDER 취소 동작: POST /internal/v1/stock/orders/{orderId}/cancel
-[ ] Idempotency-Key 중복 주문 방지 동작
-[ ] Pin-Token 헤더 존재 검증 동작
-[ ] AccountValidator.validateOwner() 적용 (이미 구현됨, 주입만 하면 됨)
-[ ] 매수 검증: cash_balance 부족 시 ORDER_001 반환
-[ ] 매도 검증: holding_quantity 부족 시 ORDER_002 반환
-[ ] MARKET 주문 즉시 체결 동작
-[ ] LIMIT 주문 조건 체결 동작
-[ ] STOCK_EXECUTION 생성 확인
-[ ] STOCK_HOLDING upsert (매수 평균단가 / 매도 수량 감소) 동작
-[ ] cash_balance 갱신 확인
-[ ] ORDER_MODIFICATION_HISTORY 취소 이력 저장 확인
+[x] STOCK_ORDER 취소 동작: POST /internal/v1/stock/orders/{orderId}/cancel
+[x] Idempotency-Key 중복 주문 방지 동작
+[x] Pin-Token 헤더 존재 검증 동작
+[x] AccountValidator.validateOwner() 적용
+[x] 매수 검증: cash_balance 부족 시 ORDER_001 반환
+[x] 매도 검증: holding_quantity 부족 시 ORDER_002 반환
+[x] MARKET 주문 즉시 체결 동작
+[x] LIMIT 주문 조건 체결 동작
+[x] STOCK_EXECUTION 생성 확인
+[x] STOCK_HOLDING upsert (매수 평균단가 / 매도 수량 감소) 동작
+[x] cash_balance 갱신 확인
+[x] ORDER_MODIFICATION_HISTORY 취소 이력 저장 확인
 [ ] 체결 조회 동작: GET /internal/v1/stock/accounts/{accountId}/executions
