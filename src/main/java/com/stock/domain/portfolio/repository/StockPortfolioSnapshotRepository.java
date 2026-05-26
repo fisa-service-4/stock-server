@@ -11,4 +11,6 @@ public interface StockPortfolioSnapshotRepository
   Optional<StockPortfolioSnapshot> findTopByUserIdOrderBySnapshotDateDesc(Long userId);
 
   Optional<StockPortfolioSnapshot> findByUserIdAndSnapshotDate(Long userId, LocalDate snapshotDate);
+
+  boolean existsByUserIdAndSnapshotDate(Long userId, LocalDate snapshotDate);
 }
