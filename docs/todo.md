@@ -140,12 +140,26 @@
 
 ## 🔲 Phase 4 — 보유종목 / 수익률 / 포트폴리오
 
-- [ ] `HoldingService` / `HoldingController`
-- [ ] `GET /internal/v1/stock/accounts/{accountId}/holdings` (실시간 평가금액 계산) 동작 확인
-- [ ] `GET /internal/v1/stock/accounts/{accountId}/returns` (totalReturnRate 실시간) 동작 확인
-- [ ] `StockPortfolioSnapshot` Service
-- [ ] 포트폴리오 스냅샷 스케줄러 (일 1회)
-- [ ] 에러 코드 HOLDING_001 적용 확인
+### ✅ Issue #25 — 보유종목 조회 + 수익률 조회 (완료)
+
+- [x] `HoldingResponse` / `HoldingReturnResponse` DTO
+- [x] `HoldingService` — `getHoldings(userId, accountId)` / `getReturns(userId, accountId)`
+  - [x] `StockPriceHistoryRepository.findLatestByStockCodes()` 배치 조회 (N+1 제거)
+  - [x] 실시간 평가금액 / unrealizedProfit / profitRate 계산
+  - [x] holdings empty → 200 OK 빈 리스트 반환
+  - [x] `totalReturnRate` 실시간 계산
+  - [x] `dailyReturnRate` 어제 snapshot 기반 (없으면 null)
+- [x] `HoldingController`
+  - [x] `GET /internal/v1/stock/accounts/{accountId}/holdings` → `200 OK`
+  - [x] `GET /internal/v1/stock/accounts/{accountId}/returns` → `200 OK`
+
+### 🔲 Issue #26 — 포트폴리오 스냅샷 + 스케줄러
+
+- [ ] `PortfolioSnapshotService` — `takeSnapshot(userId, accountId)`
+- [ ] `PortfolioSnapshotScheduler` — 매일 자정 ACTIVE 계좌 일괄 처리
+- [ ] `SecuritiesAccountRepository.findAllByAccountStatus()` 추가
+- [ ] `StockPortfolioSnapshotRepository.existsByUserIdAndSnapshotDate()` 추가 (중복 방지)
+- [ ] DB unique 제약 `(user_id, snapshot_date)` 추가
 
 ---
 
