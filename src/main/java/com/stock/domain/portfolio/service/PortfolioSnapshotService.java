@@ -41,8 +41,7 @@ public class PortfolioSnapshotService {
     var account =
         accountRepository
             .findById(accountId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("계좌 없음 accountId=" + accountId));
+            .orElseThrow(() -> new IllegalArgumentException("계좌 없음 accountId=" + accountId));
 
     List<StockHolding> holdings = holdingRepository.findBySecuritiesAccountId(accountId);
 

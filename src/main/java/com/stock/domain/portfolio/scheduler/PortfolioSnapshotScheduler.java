@@ -29,17 +29,14 @@ public class PortfolioSnapshotScheduler {
 
     for (SecuritiesAccount account : accounts) {
       try {
-        snapshotService.takeSnapshot(
-            account.getUserId(), account.getSecuritiesAccountId());
+        snapshotService.takeSnapshot(account.getUserId(), account.getSecuritiesAccountId());
         success++;
       } catch (Exception e) {
-        log.error(
-            "스냅샷 저장 실패 accountId={}", account.getSecuritiesAccountId(), e);
+        log.error("스냅샷 저장 실패 accountId={}", account.getSecuritiesAccountId(), e);
         failed++;
       }
     }
 
-    log.info(
-        "포트폴리오 스냅샷 스케줄러 완료 — success={} failed={}", success, failed);
+    log.info("포트폴리오 스냅샷 스케줄러 완료 — success={} failed={}", success, failed);
   }
 }
