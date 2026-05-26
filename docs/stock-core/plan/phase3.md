@@ -188,8 +188,8 @@ Issue #22: 주문/체결 조회 (feat/#22-order-and-execution-query) ← 미완�
 PHASE 3 완료 기준:
 
 [x] STOCK_ORDER 생성 동작: POST /internal/v1/stock/accounts/{accountId}/orders
-[ ] STOCK_ORDER 목록 조회 동작: GET /internal/v1/stock/accounts/{accountId}/orders
-[ ] STOCK_ORDER 상세 조회 동작: GET /internal/v1/stock/orders/{orderId}
+[x] STOCK_ORDER 목록 조회 동작: GET /internal/v1/stock/accounts/{accountId}/orders
+[x] STOCK_ORDER 상세 조회 동작: GET /internal/v1/stock/orders/{orderId}
 [x] STOCK_ORDER 취소 동작: POST /internal/v1/stock/orders/{orderId}/cancel
 [x] Idempotency-Key 중복 주문 방지 동작
 [x] Pin-Token 헤더 존재 검증 동작
@@ -202,4 +202,4 @@ PHASE 3 완료 기준:
 [x] STOCK_HOLDING upsert (매수 평균단가 / 매도 수량 감소) 동작
 [x] cash_balance 갱신 확인
 [x] ORDER_MODIFICATION_HISTORY 취소 이력 저장 확인
-[ ] 체결 조회 동작: GET /internal/v1/stock/accounts/{accountId}/executions
+[x] 체결 조회 동작: GET /internal/v1/stock/accounts/{accountId}/executions

@@ -124,17 +124,17 @@
   - [x] `POST /internal/v1/stock/accounts/{accountId}/orders` → 201 Created
   - [x] `POST /internal/v1/stock/orders/{orderId}/cancel` → 200 OK
 
-### 🔲 Issue #22 — 주문 / 체결 조회 (미완료)
+### ✅ Issue #22 — 주문 / 체결 조회 (완료)
 
-- [ ] `OrderListItemResponse` / `OrderDetailResponse` DTO (`stockName`, `averageExecutionPrice`, `accountId` 포함)
-- [ ] `OrderQueryService` — `getOrders(userId, accountId, status, orderType, page, size)` / `getOrderDetail(userId, orderId)`
-- [ ] `OrderController` GET 엔드포인트 추가
-  - [ ] `GET /internal/v1/stock/accounts/{accountId}/orders` (status / orderType 필터, 페이지네이션)
-  - [ ] `GET /internal/v1/stock/orders/{orderId}` (상세, `averageExecutionPrice` 포함)
-- [ ] `StockExecutionRepository` JPQL JOIN 쿼리 추가 (accountId → StockOrder JOIN)
-- [ ] `ExecutionResponse` DTO (`stockName` 포함, StockMaster JOIN)
-- [ ] `ExecutionService` — `getExecutions(userId, accountId, stockCode, fromDate, toDate, page, size)`
-- [ ] `ExecutionController` — `GET /internal/v1/stock/accounts/{accountId}/executions`
+- [x] `OrderListItemResponse` / `OrderDetailResponse` DTO (`stockName`, `averageExecutionPrice`, `accountId` 포함)
+- [x] `OrderQueryService` — `getOrders(userId, accountId, status, orderType, page, size)` / `getOrderDetail(userId, orderId)`
+- [x] `OrderController` GET 엔드포인트 추가
+  - [x] `GET /internal/v1/stock/accounts/{accountId}/orders` (status / orderType 필터, 페이지네이션)
+  - [x] `GET /internal/v1/stock/orders/{orderId}` (상세, `averageExecutionPrice` 포함)
+- [x] `StockExecutionRepository` JPQL 서브쿼리 추가 (accountId → StockOrder IN 서브쿼리)
+- [x] `ExecutionResponse` DTO (`stockName` 포함, StockMaster 조회)
+- [x] `ExecutionService` — `getExecutions(userId, accountId, stockCode, fromDate, toDate, page, size)`
+- [x] `ExecutionController` — `GET /internal/v1/stock/accounts/{accountId}/executions`
 
 ---
 
