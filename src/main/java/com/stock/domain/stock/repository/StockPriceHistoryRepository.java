@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface StockPriceHistoryRepository extends JpaRepository<StockPriceHistory, Long> {
 
@@ -12,4 +14,10 @@ public interface StockPriceHistoryRepository extends JpaRepository<StockPriceHis
 
   List<StockPriceHistory> findByStockCodeAndCollectedAtBetweenOrderByCollectedAtAsc(
       String stockCode, LocalDateTime from, LocalDateTime to);
+
+  @Query(
+      "SELECT h FROM StockPriceHistory h WHERE h.priceHistoryId IN ("
+          + "  SELECT MAX(h2.priceHistoryId) FROM StockPriceHistory h2"
+          + "  WHERE h2.stockCode IN :stockCodes GROUP BY h2.stockCode)")
+  List<StockPriceHistory> findLatestByStockCodes(@Param("stockCodes") List<String> stockCodes);
 }
