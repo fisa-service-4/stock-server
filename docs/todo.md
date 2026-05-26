@@ -103,25 +103,38 @@
 
 ## 🔲 Phase 3 — 주문 / 체결 엔진 구축
 
-- [ ] `OrderService` / `OrderController`
-- [ ] `Pin-Token` 헤더 존재 검증 (non-null, non-empty)
-- [ ] `Idempotency-Key` 헤더 처리 (동일 키 재요청 시 기존 주문 반환)
-- [ ] `AccountValidator.validateOwner()` 적용 (계좌 소유자 확인, Phase 3 전 완료됨)
-- [ ] 매수 검증: `cashBalance >= quantity × price` → ORDER_001
-- [ ] 매도 검증: `holdingQuantity >= quantity` → ORDER_002
-- [ ] `POST /internal/v1/stock/accounts/{accountId}/orders` 동작 확인
-- [ ] 체결 엔진 `@Transactional` 단일 처리:
-  - [ ] `StockExecution` 생성
-  - [ ] `StockHolding` upsert (매수: 평균단가 재계산 / 매도: 수량 감소)
-  - [ ] `SecuritiesAccount.cashBalance` 갱신
-  - [ ] `StockOrder` 상태 변경 (FILLED)
-- [ ] MARKET 주문: 현재가 즉시 체결
-- [ ] LIMIT 주문: 조건 충족 시 즉시 체결, 미충족 시 REQUESTED 유지
-- [ ] `ExecutionService`
-- [ ] `GET /internal/v1/stock/accounts/{accountId}/executions` 동작 확인
-- [ ] `POST /internal/v1/stock/orders/{orderId}/cancel` 동작 확인 (`OrderModificationHistory` 저장 포함)
-- [ ] `GET /internal/v1/stock/accounts/{accountId}/orders` 동작 확인
-- [ ] `GET /internal/v1/stock/orders/{orderId}` 동작 확인
+### ✅ Issue #21 — 주문 생성 / 즉시 체결 엔진 / 취소 (완료)
+
+- [x] `OrderCreateRequest` / `OrderCreateResponse` / `OrderCancelResponse` DTO
+- [x] `OrderService` — `createOrder` / `cancelOrder` / 즉시 체결 엔진 `tryExecute`
+  - [x] `Pin-Token` 헤더 존재 검증 (non-null, non-empty) → VALID_002
+  - [x] `Idempotency-Key` 헤더 처리 (동일 키 재요청 시 기존 주문 반환)
+  - [x] `AccountValidator.validateOwner()` 적용 (계좌 소유자 확인)
+  - [x] 매수 검증: `cashBalance >= quantity × price(LIMIT) / currentPrice(MARKET)` → ORDER_001
+  - [x] 매도 검증: `holdingQuantity >= quantity` → ORDER_002
+  - [x] 체결 엔진 `@Transactional` 단일 처리:
+    - [x] `StockExecution` 생성
+    - [x] `StockHolding` upsert (매수: 평균단가 재계산 / 매도: 수량 감소, 0이면 삭제)
+    - [x] `SecuritiesAccount.cashBalance` 갱신 (매수: withdraw / 매도: deposit)
+    - [x] `StockOrder` 상태 변경 (FILLED)
+  - [x] MARKET 주문: 현재가 즉시 체결
+  - [x] LIMIT 주문: 조건 충족 시 즉시 체결, 미충족 시 REQUESTED 유지
+  - [x] `cancelOrder`: REQUESTED 상태만 취소 가능, `OrderModificationHistory` 저장
+- [x] `OrderController`
+  - [x] `POST /internal/v1/stock/accounts/{accountId}/orders` → 201 Created
+  - [x] `POST /internal/v1/stock/orders/{orderId}/cancel` → 200 OK
+
+### 🔲 Issue #22 — 주문 / 체결 조회 (미완료)
+
+- [ ] `OrderListItemResponse` / `OrderDetailResponse` DTO (`stockName`, `averageExecutionPrice`, `accountId` 포함)
+- [ ] `OrderQueryService` — `getOrders(userId, accountId, status, orderType, page, size)` / `getOrderDetail(userId, orderId)`
+- [ ] `OrderController` GET 엔드포인트 추가
+  - [ ] `GET /internal/v1/stock/accounts/{accountId}/orders` (status / orderType 필터, 페이지네이션)
+  - [ ] `GET /internal/v1/stock/orders/{orderId}` (상세, `averageExecutionPrice` 포함)
+- [ ] `StockExecutionRepository` JPQL JOIN 쿼리 추가 (accountId → StockOrder JOIN)
+- [ ] `ExecutionResponse` DTO (`stockName` 포함, StockMaster JOIN)
+- [ ] `ExecutionService` — `getExecutions(userId, accountId, stockCode, fromDate, toDate, page, size)`
+- [ ] `ExecutionController` — `GET /internal/v1/stock/accounts/{accountId}/executions`
 
 ---
 
