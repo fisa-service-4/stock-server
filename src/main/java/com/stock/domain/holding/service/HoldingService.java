@@ -55,16 +55,13 @@ public class HoldingService {
                   BigDecimal currentPrice =
                       priceMap.getOrDefault(
                           holding.getStockCode(), holding.getAveragePurchasePrice());
-                  String name = nameCache.getOrDefault(holding.getStockCode(), holding.getStockCode());
+                  String name =
+                      nameCache.getOrDefault(holding.getStockCode(), holding.getStockCode());
                   return HoldingResponse.of(holding, name, currentPrice);
                 })
             .collect(Collectors.toList());
 
-    log.info(
-        "[{}] 보유종목 조회 accountId={} count={}",
-        MDC.get("traceId"),
-        accountId,
-        result.size());
+    log.info("[{}] 보유종목 조회 accountId={} count={}", MDC.get("traceId"), accountId, result.size());
     return result;
   }
 
@@ -111,8 +108,7 @@ public class HoldingService {
       }
 
       LocalDate yesterday = LocalDate.now().minusDays(1);
-      var yesterdaySnapshot =
-          snapshotRepository.findByUserIdAndSnapshotDate(userId, yesterday);
+      var yesterdaySnapshot = snapshotRepository.findByUserIdAndSnapshotDate(userId, yesterday);
       if (yesterdaySnapshot.isPresent()) {
         BigDecimal prevStockAsset = yesterdaySnapshot.get().getStockAsset();
         if (prevStockAsset != null && prevStockAsset.compareTo(BigDecimal.ZERO) > 0) {
@@ -145,9 +141,7 @@ public class HoldingService {
     return latestPrices.stream()
         .collect(
             Collectors.toMap(
-                StockPriceHistory::getStockCode,
-                StockPriceHistory::getClosePrice,
-                (a, b) -> a));
+                StockPriceHistory::getStockCode, StockPriceHistory::getClosePrice, (a, b) -> a));
   }
 
   private Map<String, String> buildNameCache(List<String> stockCodes) {
@@ -156,9 +150,6 @@ public class HoldingService {
             Collectors.toMap(
                 code -> code,
                 code ->
-                    stockMasterRepository
-                        .findById(code)
-                        .map(m -> m.getStockName())
-                        .orElse(code)));
+                    stockMasterRepository.findById(code).map(m -> m.getStockName()).orElse(code)));
   }
 }

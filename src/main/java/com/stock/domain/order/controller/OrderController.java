@@ -39,7 +39,9 @@ public class OrderController {
   private final OrderService orderService;
   private final OrderQueryService orderQueryService;
 
-  @Operation(summary = "주문 생성", description = "매수/매도 주문을 생성합니다. MARKET은 즉시 체결, LIMIT은 조건 충족 시 체결됩니다.")
+  @Operation(
+      summary = "주문 생성",
+      description = "매수/매도 주문을 생성합니다. MARKET은 즉시 체결, LIMIT은 조건 충족 시 체결됩니다.")
   @PostMapping("/accounts/{accountId}/orders")
   public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,

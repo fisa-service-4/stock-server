@@ -43,8 +43,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class OrderService {
 
-  private static final Set<OrderStatus> CANCELLABLE_STATUSES =
-      EnumSet.of(OrderStatus.REQUESTED);
+  private static final Set<OrderStatus> CANCELLABLE_STATUSES = EnumSet.of(OrderStatus.REQUESTED);
 
   private final StockOrderRepository stockOrderRepository;
   private final OrderModificationHistoryRepository orderModificationHistoryRepository;

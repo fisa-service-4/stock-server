@@ -47,8 +47,7 @@ public class OrderQueryService {
               accountId, status, orderType, pageable);
     } else if (status != null) {
       orders =
-          stockOrderRepository.findBySecuritiesAccountIdAndOrderStatus(
-              accountId, status, pageable);
+          stockOrderRepository.findBySecuritiesAccountIdAndOrderStatus(accountId, status, pageable);
     } else if (orderType != null) {
       orders =
           stockOrderRepository.findBySecuritiesAccountIdAndOrderType(

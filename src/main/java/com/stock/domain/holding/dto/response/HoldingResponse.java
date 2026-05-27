@@ -19,7 +19,8 @@ public class HoldingResponse {
   private BigDecimal unrealizedProfit;
   private BigDecimal profitRate;
 
-  public static HoldingResponse of(StockHolding holding, String stockName, BigDecimal currentPrice) {
+  public static HoldingResponse of(
+      StockHolding holding, String stockName, BigDecimal currentPrice) {
     BigDecimal qty = BigDecimal.valueOf(holding.getHoldingQuantity());
     BigDecimal evaluationAmount = currentPrice.multiply(qty);
     BigDecimal totalPurchased =
@@ -29,7 +30,8 @@ public class HoldingResponse {
     BigDecimal unrealizedProfit = evaluationAmount.subtract(totalPurchased);
     BigDecimal profitRate =
         totalPurchased.compareTo(BigDecimal.ZERO) > 0
-            ? unrealizedProfit.divide(totalPurchased, 4, RoundingMode.HALF_UP)
+            ? unrealizedProfit
+                .divide(totalPurchased, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP)
             : BigDecimal.ZERO;

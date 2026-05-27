@@ -153,13 +153,17 @@
   - [x] `GET /internal/v1/stock/accounts/{accountId}/holdings` → `200 OK`
   - [x] `GET /internal/v1/stock/accounts/{accountId}/returns` → `200 OK`
 
-### 🔲 Issue #26 — 포트폴리오 스냅샷 + 스케줄러
+### ✅ Issue #26 — 포트폴리오 스냅샷 + 스케줄러 (완료)
 
-- [ ] `PortfolioSnapshotService` — `takeSnapshot(userId, accountId)`
-- [ ] `PortfolioSnapshotScheduler` — 매일 자정 ACTIVE 계좌 일괄 처리
-- [ ] `SecuritiesAccountRepository.findAllByAccountStatus()` 추가
-- [ ] `StockPortfolioSnapshotRepository.existsByUserIdAndSnapshotDate()` 추가 (중복 방지)
-- [ ] DB unique 제약 `(user_id, snapshot_date)` 추가
+- [x] `SecuritiesAccountRepository.findAllByAccountStatus()` 추가
+- [x] `StockPortfolioSnapshotRepository.existsByUserIdAndSnapshotDate()` 추가 (중복 방지)
+- [x] `PortfolioSnapshotService` — `takeSnapshot(userId, accountId)`
+  - [x] priceMap 배치 조회 패턴 적용 (N+1 없음)
+  - [x] stockAsset / cashAsset / totalProfit / totalProfitRate 계산
+  - [x] 중복 저장 방지 (`existsByUserIdAndSnapshotDate` guard)
+- [x] `PortfolioSnapshotScheduler` — `@Scheduled(cron = "0 0 0 * * *")` 매일 자정
+  - [x] ACTIVE 계좌만 처리
+  - [x] 계좌별 독립 try-catch (1개 실패가 전체 차단 방지)
 
 ---
 
