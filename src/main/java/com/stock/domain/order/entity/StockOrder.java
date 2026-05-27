@@ -71,9 +71,6 @@ public class StockOrder extends BaseEntity {
   @Column(name = "ordered_at", nullable = false)
   private LocalDateTime orderedAt;
 
-  @Column(name = "idempotency_key", length = 255, unique = true)
-  private String idempotencyKey;
-
   @Builder
   public StockOrder(
       Long securitiesAccountId,
@@ -83,8 +80,7 @@ public class StockOrder extends BaseEntity {
       BigDecimal orderPrice,
       Integer orderQuantity,
       OrderedBy orderedBy,
-      LocalDateTime orderedAt,
-      String idempotencyKey) {
+      LocalDateTime orderedAt) {
     this.securitiesAccountId = securitiesAccountId;
     this.stockCode = stockCode;
     this.orderType = orderType;
@@ -96,7 +92,6 @@ public class StockOrder extends BaseEntity {
     this.orderStatus = OrderStatus.REQUESTED;
     this.orderedBy = orderedBy;
     this.orderedAt = orderedAt;
-    this.idempotencyKey = idempotencyKey;
   }
 
   public void fill(int executedQuantity, BigDecimal executionPrice) {

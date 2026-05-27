@@ -6,6 +6,9 @@ spring:
     username: finance
     password: 1234
     driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      data-source-properties:
+        oracle.jdbc.defaultNChar: "true"
   jpa:
     hibernate:
       ddl-auto: update

@@ -36,7 +36,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -59,24 +58,7 @@ public class OrderService {
   public OrderCreateResponse createOrder(
       Long userId,
       Long accountId,
-      String pinToken,
-      String idempotencyKey,
       OrderCreateRequest request) {
-
-    validatePinToken(pinToken);
-
-    // 멱등성: 동일 키 재요청 시 기존 주문 반환
-    if (StringUtils.hasText(idempotencyKey)) {
-      var existing = stockOrderRepository.findByIdempotencyKey(idempotencyKey);
-      if (existing.isPresent()) {
-        log.info(
-            "[{}] 중복 주문 요청 처리 idempotencyKey={} orderId={}",
-            MDC.get("traceId"),
-            idempotencyKey,
-            existing.get().getStockOrderId());
-        return OrderCreateResponse.from(existing.get());
-      }
-    }
 
     SecuritiesAccount account = accountValidator.validateOwner(userId, accountId);
 
@@ -104,7 +86,6 @@ public class OrderService {
             .orderQuantity(request.getQuantity())
             .orderedBy(OrderedBy.USER)
             .orderedAt(LocalDateTime.now())
-            .idempotencyKey(idempotencyKey)
             .build();
 
     stockOrderRepository.save(order);
@@ -166,13 +147,6 @@ public class OrderService {
   // ──────────────────────────────────────────────────────────
   // private
   // ──────────────────────────────────────────────────────────
-
-  private void validatePinToken(String pinToken) {
-    if (!StringUtils.hasText(pinToken)) {
-      log.warn("[{}] Pin-Token 누락", MDC.get("traceId"));
-      throw new GlobalException(ErrorCode.VALID_002);
-    }
-  }
 
   private void validateOrderCondition(
       OrderCreateRequest request, SecuritiesAccount account, BigDecimal currentPrice) {

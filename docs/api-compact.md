@@ -23,9 +23,6 @@
 |---|---|---|
 | `X-User-Id` | O | 사용자 식별 ID |
 | `X-Trace-Id` | O | 요청 추적 ID (없으면 UUID 생성) |
-| `Idempotency-Key` | Write API | 중복 요청 방지 |
-
-> Pin-Token은 transaction-server가 stock-server 호출 시 전달. stock-server는 헤더 존재 여부만 검증.
 
 ---
 
@@ -163,7 +160,7 @@
 
 ### STOCK-ORDER-001. 주문 생성
 **POST** `/internal/v1/stock/accounts/{accountId}/orders`
-> Write API — `Idempotency-Key` 필수
+> Write API
 
 **Request Body**
 ```json
@@ -242,7 +239,7 @@
 
 ### STOCK-ORDER-004. 주문 취소
 **POST** `/internal/v1/stock/orders/{orderId}/cancel`
-> Write API — `Idempotency-Key` 필수
+> Write API
 
 ```json
 {
