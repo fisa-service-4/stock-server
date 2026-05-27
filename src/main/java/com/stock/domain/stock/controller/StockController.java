@@ -7,6 +7,7 @@ import com.stock.domain.stock.service.StockPriceHistoryService;
 import com.stock.domain.stock.service.StockService;
 import com.stock.global.constants.HeaderConstants;
 import com.stock.global.response.ApiResponse;
+import com.stock.global.response.ContentWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
@@ -35,13 +36,13 @@ public class StockController {
 
   @Operation(summary = "종목 검색", description = "종목명 또는 종목코드로 검색합니다.")
   @GetMapping("/search")
-  public ResponseEntity<ApiResponse<List<StockSearchResponse>>> search(
+  public ResponseEntity<ApiResponse<ContentWrapper<StockSearchResponse>>> search(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
       @RequestParam String keyword) {
     log.info("[{}] [userId={}] 종목 검색 keyword={}", MDC.get("traceId"), userId, keyword);
     List<StockSearchResponse> result = stockService.search(keyword);
-    return ResponseEntity.ok(ApiResponse.success(result, traceId));
+    return ResponseEntity.ok(ApiResponse.success(ContentWrapper.of(result), traceId));
   }
 
   @Operation(summary = "종목 현재가 조회", description = "종목 코드 기준 최신 시세 데이터를 반환합니다.")
@@ -62,19 +63,21 @@ public class StockController {
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
       @PathVariable String stockCode,
       @RequestParam String interval,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+    LocalDate resolvedFrom = fromDate != null ? fromDate : LocalDate.now().minusDays(30);
+    LocalDate resolvedTo = toDate != null ? toDate : LocalDate.now();
     log.info(
         "[{}] [userId={}] 차트 조회 stockCode={} interval={} fromDate={} toDate={}",
         MDC.get("traceId"),
         userId,
         stockCode,
         interval,
-        fromDate,
-        toDate);
+        resolvedFrom,
+        resolvedTo);
     StockChartResponse result =
         stockPriceHistoryService.getChart(
-            stockCode, fromDate.atStartOfDay(), toDate.atTime(23, 59, 59));
+            stockCode, resolvedFrom.atStartOfDay(), resolvedTo.atTime(23, 59, 59));
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }

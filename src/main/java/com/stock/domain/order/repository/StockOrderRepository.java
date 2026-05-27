@@ -10,8 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StockOrderRepository extends JpaRepository<StockOrder, Long> {
 
-  Optional<StockOrder> findByIdempotencyKey(String idempotencyKey);
-
   Page<StockOrder> findBySecuritiesAccountId(Long securitiesAccountId, Pageable pageable);
 
   Page<StockOrder> findBySecuritiesAccountIdAndOrderStatus(

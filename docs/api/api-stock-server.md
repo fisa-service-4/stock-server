@@ -237,7 +237,6 @@
 **POST** `/accounts/{accountId}/orders`
 
 > Write API
-> Idempotency-Key 필수
 
 ### Request Body
 
@@ -371,7 +370,6 @@
 **POST** `/orders/{orderId}/cancel`
 
 > Write API
-> Idempotency-Key 필수
 
 ### Response `200 OK`
 

@@ -35,8 +35,6 @@
 |---|---|---|
 | `X-User-Id` | O | 테스트 계정: `1` |
 | `X-Trace-Id` | O | 임의 문자열 (ex: `test-001`) |
-| `Idempotency-Key` | Write API | 중복 요청 방지용 UUID. 재시도 시 동일 값 사용 |
-| `Pin-Token` | 주문 생성 | 임의 문자열 (ex: `dummy-pin`) — 존재 여부만 검사 |
 
 ---
 
@@ -159,9 +157,6 @@ curl http://localhost:8082/internal/v1/stock/accounts/1/cash-balance \
 
 ## 7. 주문 생성
 
-> `Pin-Token` 과 `Idempotency-Key` 헤더가 **필수**입니다.  
-> `Idempotency-Key` 는 요청마다 새 UUID를 사용하세요. 동일 키로 재요청하면 기존 주문이 반환됩니다.
-
 ### 7-1. 매수 — 시장가 (MARKET)
 
 ```bash
@@ -169,8 +164,6 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
   -H "Content-Type: application/json" \
   -H "X-User-Id: 1" \
   -H "X-Trace-Id: test-001" \
-  -H "Pin-Token: dummy-pin" \
-  -H "Idempotency-Key: $(uuidgen)" \
   -d '{
     "stockCode": "005930",
     "orderType": "BUY",
@@ -188,8 +181,6 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
   -H "Content-Type: application/json" \
   -H "X-User-Id: 1" \
   -H "X-Trace-Id: test-001" \
-  -H "Pin-Token: dummy-pin" \
-  -H "Idempotency-Key: $(uuidgen)" \
   -d '{
     "stockCode": "005930",
     "orderType": "BUY",
@@ -208,8 +199,6 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
   -H "Content-Type: application/json" \
   -H "X-User-Id: 1" \
   -H "X-Trace-Id: test-001" \
-  -H "Pin-Token: dummy-pin" \
-  -H "Idempotency-Key: $(uuidgen)" \
   -d '{
     "stockCode": "005930",
     "orderType": "SELL",
@@ -356,18 +345,20 @@ curl http://localhost:8082/internal/v1/stock/accounts/1/holdings \
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "stockCode": "005930",
-      "stockName": "삼성전자",
-      "quantity": 5,
-      "averagePrice": 70350.00,
-      "currentPrice": 71200.00,
-      "evaluationAmount": 356000.00,
-      "unrealizedProfit": 4250.00,
-      "profitRate": 1.21
-    }
-  ]
+  "data": {
+    "content": [
+      {
+        "stockCode": "005930",
+        "stockName": "삼성전자",
+        "quantity": 5,
+        "averagePrice": 70350.00,
+        "currentPrice": 71200.00,
+        "evaluationAmount": 356000.00,
+        "unrealizedProfit": 4250.00,
+        "profitRate": 1.21
+      }
+    ]
+  }
 }
 ```
 
@@ -433,15 +424,10 @@ http://localhost:8082/swagger-ui/index.html
 Windows PowerShell에서는 `uuidgen` 대신 아래를 사용하세요.
 
 ```powershell
-# PowerShell에서 UUID 생성
-$uuid = [System.Guid]::NewGuid().ToString()
-
 # 주문 생성 예시
 curl.exe -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders `
   -H "Content-Type: application/json" `
   -H "X-User-Id: 1" `
   -H "X-Trace-Id: test-001" `
-  -H "Pin-Token: dummy-pin" `
-  -H "Idempotency-Key: $uuid" `
   -d '{\"stockCode\":\"005930\",\"orderType\":\"BUY\",\"orderMethod\":\"MARKET\",\"quantity\":5}'
 ```

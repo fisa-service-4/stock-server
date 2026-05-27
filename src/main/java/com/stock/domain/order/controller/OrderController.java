@@ -46,8 +46,6 @@ public class OrderController {
   public ResponseEntity<ApiResponse<OrderCreateResponse>> createOrder(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
-      @RequestHeader(value = "Pin-Token", required = false) String pinToken,
-      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
       @PathVariable Long accountId,
       @Valid @RequestBody OrderCreateRequest request) {
     log.info(
@@ -59,7 +57,7 @@ public class OrderController {
         request.getOrderType(),
         request.getOrderMethod());
     OrderCreateResponse result =
-        orderService.createOrder(userId, accountId, pinToken, idempotencyKey, request);
+        orderService.createOrder(userId, accountId, request);
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result, traceId));
   }
 

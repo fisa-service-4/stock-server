@@ -5,9 +5,9 @@ import com.stock.domain.account.dto.response.CashBalanceResponse;
 import com.stock.domain.account.service.AccountService;
 import com.stock.global.constants.HeaderConstants;
 import com.stock.global.response.ApiResponse;
+import com.stock.global.response.ContentWrapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Slf4j
 @Tag(name = "Account", description = "증권 계좌 API")
@@ -29,12 +31,12 @@ public class AccountController {
 
   @Operation(summary = "주문 가능 계좌 조회", description = "사용자의 증권 계좌 목록을 조회합니다.")
   @GetMapping("/accounts")
-  public ResponseEntity<ApiResponse<List<AccountResponse>>> getAccounts(
+  public ResponseEntity<ApiResponse<ContentWrapper<AccountResponse>>> getAccounts(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId) {
     log.info("[{}] [userId={}] 계좌 조회 요청", MDC.get("traceId"), userId);
     List<AccountResponse> result = accountService.getAccounts(userId);
-    return ResponseEntity.ok(ApiResponse.success(result, traceId));
+    return ResponseEntity.ok(ApiResponse.success(ContentWrapper.of(result), traceId));
   }
 
   @Operation(summary = "예수금 조회", description = "증권 계좌의 예수금 및 출금 가능 금액을 조회합니다.")
