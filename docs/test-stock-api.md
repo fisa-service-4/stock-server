@@ -18,7 +18,7 @@
 | 계좌명 | `테스트 계좌` |
 | 계좌번호 | `1234567890` |
 
-### 시드 종목 (기준가 — 5초마다 ±3% 변동)
+### 시드 종목
 
 | stockCode | 종목명 | 기준가 |
 |---|---|---|
@@ -26,6 +26,15 @@
 | `000660` | SK하이닉스 | 210,000원 |
 | `035420` | NAVER | 190,000원 |
 | `035720` | 카카오 | 42,000원 |
+
+#### 시드 데이터 구성
+
+| 구분 | 설명 |
+|---|---|
+| **현재가 (tick)** | 5초마다 ±3% 변동. 체결 엔진 현재가 산출용 |
+| **차트 (daily candle)** | 앱 기동 시 최근 30일 영업일치 자동 삽입. `collectedAt=15:30` 기준 |
+
+daily candle은 앱 재기동 시 이미 존재하면 skip (중복 삽입 없음).
 
 ---
 
@@ -72,7 +81,7 @@ curl -G http://localhost:8082/internal/v1/stock/search \
 
 ## 3. 현재가 조회
 
-> 5초 주기로 가격이 변동됩니다.
+> 5초 주기로 가격이 변동됩니다. 이 값이 주문 체결 시 현재가로 사용됩니다.
 
 ```bash
 curl http://localhost:8082/internal/v1/stock/005930/price \
@@ -96,7 +105,12 @@ curl http://localhost:8082/internal/v1/stock/035720/price -H "X-User-Id: 1" -H "
 
 ## 4. 차트 조회
 
+> **interval**: `DAILY` / `WEEKLY` / `MONTHLY` 모두 지원.  
+> `fromDate` / `toDate` 미입력 시 기본값: 최근 30일.  
+> 앱 기동 시 최근 30일 영업일치 daily candle이 자동 삽입되므로 별도 데이터 준비 불필요.
+
 ```bash
+# 기본 (최근 30일 DAILY)
 curl -G http://localhost:8082/internal/v1/stock/005930/charts \
   -H "X-User-Id: 1" \
   -H "X-Trace-Id: test-001" \
@@ -104,14 +118,48 @@ curl -G http://localhost:8082/internal/v1/stock/005930/charts \
 ```
 
 ```bash
-# 기간 지정 (DAILY / WEEKLY / MONTHLY)
+# 기간 직접 지정
 curl -G http://localhost:8082/internal/v1/stock/005930/charts \
   -H "X-User-Id: 1" \
   -H "X-Trace-Id: test-001" \
   --data-urlencode "interval=DAILY" \
   --data-urlencode "fromDate=2026-05-01" \
-  --data-urlencode "toDate=2026-05-27"
+  --data-urlencode "toDate=2026-05-29"
 ```
+
+```bash
+# 주봉 (각 주의 첫 영업일 기준 캔들)
+curl -G http://localhost:8082/internal/v1/stock/005930/charts \
+  -H "X-User-Id: 1" \
+  -H "X-Trace-Id: test-001" \
+  --data-urlencode "interval=WEEKLY"
+```
+
+```bash
+# 월봉 (각 월의 첫 영업일 기준 캔들)
+curl -G http://localhost:8082/internal/v1/stock/005930/charts \
+  -H "X-User-Id: 1" \
+  -H "X-Trace-Id: test-001" \
+  --data-urlencode "interval=MONTHLY"
+```
+
+**응답 예시**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      { "date": "2026-05-02", "open": 70000.00, "high": 71200.00, "low": 69500.00, "close": 70800.00, "volume": 432000 },
+      { "date": "2026-05-03", "open": 70800.00, "high": 72000.00, "low": 70200.00, "close": 71500.00, "volume": 687000 }
+    ]
+  }
+}
+```
+
+**데이터 구조**
+- 과거 날짜: daily candle (1일 1건, `collectedAt=15:30`)
+- 오늘: 최신 tick 1건이 당일 캔들로 표시됨 (장중 부분 캔들)
+- 주말/공휴일: 데이터 없음 (영업일만 존재)
 
 ---
 

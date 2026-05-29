@@ -78,8 +78,7 @@ public class StockController {
         resolvedFrom,
         resolvedTo);
     StockChartResponse result =
-        stockPriceHistoryService.getChart(
-            stockCode, resolvedFrom.atStartOfDay(), resolvedTo.atTime(23, 59, 59));
+        stockPriceHistoryService.getChart(stockCode, resolvedFrom, resolvedTo, interval);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }
