@@ -105,7 +105,7 @@ curl http://localhost:8082/internal/v1/stock/035720/price -H "X-User-Id: 1" -H "
 
 ## 4. 차트 조회
 
-> **interval**: `DAILY` 만 구현됨. `WEEKLY` / `MONTHLY` 는 미구현 (500 반환).  
+> **interval**: `DAILY` / `WEEKLY` / `MONTHLY` 모두 지원.  
 > `fromDate` / `toDate` 미입력 시 기본값: 최근 30일.  
 > 앱 기동 시 최근 30일 영업일치 daily candle이 자동 삽입되므로 별도 데이터 준비 불필요.
 
@@ -125,6 +125,22 @@ curl -G http://localhost:8082/internal/v1/stock/005930/charts \
   --data-urlencode "interval=DAILY" \
   --data-urlencode "fromDate=2026-05-01" \
   --data-urlencode "toDate=2026-05-29"
+```
+
+```bash
+# 주봉 (각 주의 첫 영업일 기준 캔들)
+curl -G http://localhost:8082/internal/v1/stock/005930/charts \
+  -H "X-User-Id: 1" \
+  -H "X-Trace-Id: test-001" \
+  --data-urlencode "interval=WEEKLY"
+```
+
+```bash
+# 월봉 (각 월의 첫 영업일 기준 캔들)
+curl -G http://localhost:8082/internal/v1/stock/005930/charts \
+  -H "X-User-Id: 1" \
+  -H "X-Trace-Id: test-001" \
+  --data-urlencode "interval=MONTHLY"
 ```
 
 **응답 예시**

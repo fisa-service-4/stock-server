@@ -15,6 +15,8 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.IsoFields;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -210,9 +212,8 @@ public class StockPriceHistoryService {
     List<CandleItem> content =
         switch (interval.toUpperCase()) {
           case "DAILY" -> buildDaily(histories);
-            // TODO: WEEKLY / MONTHLY 집계 구현
-          case "WEEKLY" -> throw new UnsupportedOperationException("WEEKLY 집계 미구현");
-          case "MONTHLY" -> throw new UnsupportedOperationException("MONTHLY 집계 미구현");
+          case "WEEKLY" -> buildWeekly(histories);
+          case "MONTHLY" -> buildMonthly(histories);
           default -> throw new GlobalException(ErrorCode.VALID_001);
         };
 
@@ -238,5 +239,59 @@ public class StockPriceHistoryService {
         .flatMap(Optional::stream)
         .map(CandleItem::from)
         .toList();
+  }
+
+  private List<CandleItem> buildWeekly(List<StockPriceHistory> histories) {
+    return histories.stream()
+        .collect(
+            Collectors.groupingBy(
+                h -> {
+                  int weekYear = h.getTradedDate().get(IsoFields.WEEK_BASED_YEAR);
+                  int weekNum = h.getTradedDate().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                  return weekYear * 100 + weekNum;
+                },
+                TreeMap::new,
+                Collectors.toList()))
+        .values()
+        .stream()
+        .map(group -> aggregateCandle(group, group.get(0).getTradedDate()))
+        .toList();
+  }
+
+  private List<CandleItem> buildMonthly(List<StockPriceHistory> histories) {
+    return histories.stream()
+        .collect(
+            Collectors.groupingBy(
+                h -> YearMonth.from(h.getTradedDate()), TreeMap::new, Collectors.toList()))
+        .values()
+        .stream()
+        .map(group -> aggregateCandle(group, group.get(0).getTradedDate()))
+        .toList();
+  }
+
+  private CandleItem aggregateCandle(List<StockPriceHistory> group, LocalDate representativeDate) {
+    group.sort(Comparator.comparing(StockPriceHistory::getTradedDate));
+    BigDecimal open = group.get(0).getOpenPrice();
+    BigDecimal close = group.get(group.size() - 1).getClosePrice();
+    BigDecimal high =
+        group.stream()
+            .map(StockPriceHistory::getHighPrice)
+            .max(Comparator.naturalOrder())
+            .orElse(BigDecimal.ZERO);
+    BigDecimal low =
+        group.stream()
+            .map(StockPriceHistory::getLowPrice)
+            .min(Comparator.naturalOrder())
+            .orElse(BigDecimal.ZERO);
+    long volume = group.stream().mapToLong(StockPriceHistory::getVolume).sum();
+
+    return CandleItem.builder()
+        .date(representativeDate)
+        .open(open)
+        .high(high)
+        .low(low)
+        .close(close)
+        .volume(volume)
+        .build();
   }
 }
