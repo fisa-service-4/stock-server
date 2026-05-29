@@ -30,6 +30,7 @@ public class DataInitializer {
   public void init() {
     initAccount();
     initStockPrices();
+    initDailyCandles();
   }
 
   private void initAccount() {
@@ -62,5 +63,20 @@ public class DataInitializer {
                     stock.getStockCode(),
                     mockStockPriceProvider.getFallbackPrice(stock.getStockCode())));
     log.info("[DataInitializer] 초기 시세 삽입 완료");
+  }
+
+  private void initDailyCandles() {
+    if (mockStockPriceProvider == null) {
+      log.info("[DataInitializer] mock 비활성화 — daily candle 삽입 skip");
+      return;
+    }
+    stockMasterRepository
+        .findAll()
+        .forEach(
+            stock ->
+                stockPriceHistoryService.initDailyCandles(
+                    stock.getStockCode(),
+                    mockStockPriceProvider.getFallbackPrice(stock.getStockCode())));
+    log.info("[DataInitializer] daily candle 삽입 완료");
   }
 }

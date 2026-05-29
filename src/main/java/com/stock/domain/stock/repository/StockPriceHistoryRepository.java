@@ -1,6 +1,7 @@
 package com.stock.domain.stock.repository;
 
 import com.stock.domain.stock.entity.StockPriceHistory;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,11 @@ public interface StockPriceHistoryRepository extends JpaRepository<StockPriceHis
 
   List<StockPriceHistory> findByStockCodeAndCollectedAtBetweenOrderByCollectedAtAsc(
       String stockCode, LocalDateTime from, LocalDateTime to);
+
+  List<StockPriceHistory> findByStockCodeAndTradedDateBetweenOrderByTradedDateAsc(
+      String stockCode, LocalDate from, LocalDate to);
+
+  boolean existsByStockCodeAndCollectedAt(String stockCode, LocalDateTime collectedAt);
 
   @Query(
       "SELECT h FROM StockPriceHistory h WHERE h.priceHistoryId IN ("

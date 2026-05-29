@@ -7,14 +7,20 @@ import com.stock.domain.stock.entity.StockMaster;
 import com.stock.domain.stock.entity.StockPriceHistory;
 import com.stock.domain.stock.repository.StockMasterRepository;
 import com.stock.domain.stock.repository.StockPriceHistoryRepository;
+import com.stock.external.kis.dummy.generator.MockPriceGenerator;
 import com.stock.global.exception.ErrorCode;
 import com.stock.global.exception.GlobalException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -28,6 +34,7 @@ public class StockPriceHistoryService {
 
   private final StockPriceHistoryRepository stockPriceHistoryRepository;
   private final StockMasterRepository stockMasterRepository;
+  private final MockPriceGenerator mockPriceGenerator;
 
   @Transactional
   public void recordTick(String stockCode, BigDecimal prevClose, BigDecimal newClose) {
@@ -116,8 +123,72 @@ public class StockPriceHistoryService {
     return StockPriceResponse.of(master, history);
   }
 
+  @Transactional
+  public void initDailyCandles(String stockCode, BigDecimal basePrice) {
+    LocalDate today = LocalDate.now();
+    BigDecimal prevClose = basePrice;
+
+    for (int i = 30; i >= 1; i--) {
+      LocalDate date = today.minusDays(i);
+      DayOfWeek dow = date.getDayOfWeek();
+      if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+        continue;
+      }
+
+      BigDecimal open = prevClose;
+      BigDecimal close = mockPriceGenerator.generate(open);
+      BigDecimal high =
+          close
+              .max(open)
+              .multiply(BigDecimal.ONE.add(BigDecimal.valueOf(Math.random() * 0.005)))
+              .setScale(2, RoundingMode.HALF_UP);
+      BigDecimal low =
+          close
+              .min(open)
+              .multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(Math.random() * 0.005)))
+              .setScale(2, RoundingMode.HALF_UP)
+              .max(BigDecimal.ONE);
+      BigDecimal fluctuationRate =
+          open.compareTo(BigDecimal.ZERO) != 0
+              ? close
+                  .subtract(open)
+                  .divide(open, 4, RoundingMode.HALF_UP)
+                  .multiply(new BigDecimal("100"))
+                  .setScale(2, RoundingMode.HALF_UP)
+              : BigDecimal.ZERO;
+      long volume = ThreadLocalRandom.current().nextLong(100_000, 1_000_001);
+
+      prevClose = close;
+
+      LocalDateTime collectedAt = date.atTime(15, 30);
+      if (stockPriceHistoryRepository.existsByStockCodeAndCollectedAt(stockCode, collectedAt)) {
+        continue;
+      }
+
+      stockPriceHistoryRepository.save(
+          StockPriceHistory.builder()
+              .stockCode(stockCode)
+              .tradedDate(date)
+              .openPrice(open)
+              .highPrice(high)
+              .lowPrice(low)
+              .closePrice(close)
+              .volume(volume)
+              .fluctuationRate(fluctuationRate)
+              .collectedAt(collectedAt)
+              .build());
+
+      log.info(
+          "[StockPriceHistoryService] daily candle 삽입 stockCode={} date={} close={}",
+          stockCode,
+          date,
+          close);
+    }
+  }
+
   @Transactional(readOnly = true)
-  public StockChartResponse getChart(String stockCode, LocalDateTime from, LocalDateTime to) {
+  public StockChartResponse getChart(
+      String stockCode, LocalDate from, LocalDate to, String interval) {
     stockMasterRepository
         .findById(stockCode)
         .orElseThrow(
@@ -127,7 +198,7 @@ public class StockPriceHistoryService {
             });
 
     List<StockPriceHistory> histories =
-        stockPriceHistoryRepository.findByStockCodeAndCollectedAtBetweenOrderByCollectedAtAsc(
+        stockPriceHistoryRepository.findByStockCodeAndTradedDateBetweenOrderByTradedDateAsc(
             stockCode, from, to);
 
     if (histories.isEmpty()) {
@@ -136,10 +207,36 @@ public class StockPriceHistoryService {
       throw new GlobalException(ErrorCode.STOCK_003);
     }
 
-    List<CandleItem> content = histories.stream().map(CandleItem::from).toList();
+    List<CandleItem> content =
+        switch (interval.toUpperCase()) {
+          case "DAILY" -> buildDaily(histories);
+            // TODO: WEEKLY / MONTHLY 집계 구현
+          case "WEEKLY" -> throw new UnsupportedOperationException("WEEKLY 집계 미구현");
+          case "MONTHLY" -> throw new UnsupportedOperationException("MONTHLY 집계 미구현");
+          default -> throw new GlobalException(ErrorCode.VALID_001);
+        };
 
-    log.info("[{}] 차트 조회 성공 stockCode={} count={}", MDC.get("traceId"), stockCode, content.size());
+    log.info(
+        "[{}] 차트 조회 성공 stockCode={} interval={} count={}",
+        MDC.get("traceId"),
+        stockCode,
+        interval,
+        content.size());
 
     return StockChartResponse.builder().content(content).build();
+  }
+
+  private List<CandleItem> buildDaily(List<StockPriceHistory> histories) {
+    return histories.stream()
+        .collect(
+            Collectors.groupingBy(
+                StockPriceHistory::getTradedDate,
+                TreeMap::new,
+                Collectors.maxBy(Comparator.comparing(StockPriceHistory::getCollectedAt))))
+        .values()
+        .stream()
+        .flatMap(Optional::stream)
+        .map(CandleItem::from)
+        .toList();
   }
 }
