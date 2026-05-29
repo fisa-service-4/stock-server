@@ -55,10 +55,7 @@ public class OrderService {
   private final ObjectMapper objectMapper;
 
   @Transactional
-  public OrderCreateResponse createOrder(
-      Long userId,
-      Long accountId,
-      OrderCreateRequest request) {
+  public OrderCreateResponse createOrder(Long userId, Long accountId, OrderCreateRequest request) {
 
     SecuritiesAccount account = accountValidator.validateOwner(userId, accountId);
 

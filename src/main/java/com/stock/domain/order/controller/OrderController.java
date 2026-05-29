@@ -56,8 +56,7 @@ public class OrderController {
         request.getStockCode(),
         request.getOrderType(),
         request.getOrderMethod());
-    OrderCreateResponse result =
-        orderService.createOrder(userId, accountId, request);
+    OrderCreateResponse result = orderService.createOrder(userId, accountId, request);
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result, traceId));
   }
 
