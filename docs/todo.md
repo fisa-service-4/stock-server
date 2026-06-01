@@ -171,8 +171,8 @@
 
 - [ ] build.gradle: `spring-kafka` 의존성 추가
 - [ ] application.yaml: Kafka bootstrap-servers 설정
-- [ ] `POST /internal/v1/stock/cash/deposit` 동작 확인
-- [ ] `POST /internal/v1/stock/cash/withdraw` 동작 확인 (잔액 부족 검증 포함)
+- [ ] `POST /internal/v1/stock/accounts/{accountId}/cash/deposit` 동작 확인
+- [ ] `POST /internal/v1/stock/accounts/{accountId}/cash/withdraw` 동작 확인 (잔액 부족 검증 포함)
 - [ ] Kafka 이벤트 발행 확인 (kafka-ui):
   - [ ] `stock.cash.deposit.completed`
   - [ ] `stock.cash.deposit.failed`
