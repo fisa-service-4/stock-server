@@ -16,10 +16,10 @@ public class MockStockPriceProvider {
 
   private static final Map<String, BigDecimal> FALLBACK_PRICES =
       Map.of(
-          "005930", new BigDecimal("70000"),
-          "000660", new BigDecimal("210000"),
-          "035420", new BigDecimal("190000"),
-          "035720", new BigDecimal("42000"));
+          "005930", new BigDecimal("355000"),
+          "000660", new BigDecimal("2378000"),
+          "035420", new BigDecimal("283500"),
+          "035720", new BigDecimal("42950"));
 
   private final MockPriceGenerator mockPriceGenerator;
 

@@ -117,12 +117,20 @@ public class StockPriceHistoryService {
                   return new GlobalException(ErrorCode.STOCK_002);
                 });
 
+    BigDecimal yesterdayClose =
+        stockPriceHistoryRepository
+            .findTopByStockCodeAndTradedDateBeforeOrderByTradedDateDescCollectedAtDesc(
+                stockCode, LocalDate.now())
+            .map(StockPriceHistory::getClosePrice)
+            .orElse(history.getClosePrice());
+
     log.info(
-        "[{}] 현재가 조회 성공 stockCode={} currentPrice={}",
+        "[{}] 현재가 조회 성공 stockCode={} currentPrice={} yesterdayClose={}",
         MDC.get("traceId"),
         stockCode,
-        history.getClosePrice());
-    return StockPriceResponse.of(master, history);
+        history.getClosePrice(),
+        yesterdayClose);
+    return StockPriceResponse.of(master, history, yesterdayClose);
   }
 
   @Transactional
@@ -130,7 +138,7 @@ public class StockPriceHistoryService {
     LocalDate today = LocalDate.now();
     BigDecimal prevClose = basePrice;
 
-    for (int i = 30; i >= 1; i--) {
+    for (int i = 60; i >= 1; i--) {
       LocalDate date = today.minusDays(i);
       DayOfWeek dow = date.getDayOfWeek();
       if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
@@ -143,12 +151,12 @@ public class StockPriceHistoryService {
           close
               .max(open)
               .multiply(BigDecimal.ONE.add(BigDecimal.valueOf(Math.random() * 0.005)))
-              .setScale(2, RoundingMode.HALF_UP);
+              .setScale(0, RoundingMode.HALF_UP);
       BigDecimal low =
           close
               .min(open)
               .multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(Math.random() * 0.005)))
-              .setScale(2, RoundingMode.HALF_UP)
+              .setScale(0, RoundingMode.HALF_UP)
               .max(BigDecimal.ONE);
       BigDecimal fluctuationRate =
           open.compareTo(BigDecimal.ZERO) != 0
