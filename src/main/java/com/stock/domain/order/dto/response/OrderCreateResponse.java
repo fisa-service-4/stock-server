@@ -19,6 +19,7 @@ public class OrderCreateResponse {
   private OrderMethod orderMethod;
   private Integer quantity;
   private BigDecimal price;
+  private BigDecimal averageExecutionPrice;
   private Integer filledQuantity;
   private Integer remainingQuantity;
   private OrderStatus status;
@@ -34,6 +35,7 @@ public class OrderCreateResponse {
         .orderMethod(order.getOrderMethod())
         .quantity(order.getOrderQuantity())
         .price(price)
+        .averageExecutionPrice(order.getAverageExecutionPrice())
         .filledQuantity(order.getFilledQuantity())
         .remainingQuantity(order.getRemainingQuantity())
         .status(order.getOrderStatus())

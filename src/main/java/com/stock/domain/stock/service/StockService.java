@@ -7,6 +7,7 @@ import com.stock.domain.stock.repository.StockMasterRepository;
 import com.stock.domain.stock.repository.StockPriceHistoryRepository;
 import com.stock.global.exception.ErrorCode;
 import com.stock.global.exception.GlobalException;
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,15 @@ public class StockService {
                   stockPriceHistoryRepository
                       .findTopByStockCodeOrderByCollectedAtDesc(master.getStockCode())
                       .orElseThrow(() -> new GlobalException(ErrorCode.STOCK_002));
-              return StockSearchResponse.of(master, history);
+
+              BigDecimal prevDayClose =
+                  stockPriceHistoryRepository
+                      .findTopByStockCodeAndTradedDateBeforeOrderByTradedDateDescCollectedAtDesc(
+                          master.getStockCode(), history.getTradedDate())
+                      .map(StockPriceHistory::getClosePrice)
+                      .orElse(history.getClosePrice());
+
+              return StockSearchResponse.of(master, history, prevDayClose);
             })
         .toList();
   }

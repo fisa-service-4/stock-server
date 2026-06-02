@@ -29,8 +29,8 @@ public class DataInitializer {
   @PostConstruct
   public void init() {
     initAccount();
-    initStockPrices();
     initDailyCandles();
+    initStockPrices();
   }
 
   private void initAccount() {
