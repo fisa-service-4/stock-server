@@ -13,6 +13,10 @@ public interface StockPriceHistoryRepository extends JpaRepository<StockPriceHis
 
   Optional<StockPriceHistory> findTopByStockCodeOrderByCollectedAtDesc(String stockCode);
 
+  Optional<StockPriceHistory>
+      findTopByStockCodeAndTradedDateBeforeOrderByTradedDateDescCollectedAtDesc(
+          String stockCode, LocalDate date);
+
   List<StockPriceHistory> findByStockCodeAndCollectedAtBetweenOrderByCollectedAtAsc(
       String stockCode, LocalDateTime from, LocalDateTime to);
 

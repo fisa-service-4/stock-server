@@ -75,7 +75,7 @@ public class StockHolding extends BaseEntity {
         this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity)).add(newAmount);
     int newQuantity = this.holdingQuantity + quantity;
     this.averagePurchasePrice =
-        totalAmount.divide(BigDecimal.valueOf(newQuantity), 2, java.math.RoundingMode.HALF_UP);
+        totalAmount.divide(BigDecimal.valueOf(newQuantity), 0, java.math.RoundingMode.HALF_UP);
     this.holdingQuantity = newQuantity;
     this.totalPurchaseAmount =
         this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity));

@@ -25,13 +25,15 @@ public class OrderCreateResponse {
   private LocalDateTime orderedAt;
 
   public static OrderCreateResponse from(StockOrder order) {
+    BigDecimal price =
+        order.getOrderPrice() != null ? order.getOrderPrice() : order.getAverageExecutionPrice();
     return OrderCreateResponse.builder()
         .orderId(order.getStockOrderId())
         .stockCode(order.getStockCode())
         .orderType(order.getOrderType())
         .orderMethod(order.getOrderMethod())
         .quantity(order.getOrderQuantity())
-        .price(order.getOrderPrice())
+        .price(price)
         .filledQuantity(order.getFilledQuantity())
         .remainingQuantity(order.getRemainingQuantity())
         .status(order.getOrderStatus())

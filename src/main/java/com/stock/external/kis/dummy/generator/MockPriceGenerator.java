@@ -12,7 +12,7 @@ public class MockPriceGenerator {
 
     BigDecimal multiplier = BigDecimal.ONE.add(BigDecimal.valueOf(variationRate));
 
-    BigDecimal generatedPrice = lastPrice.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+    BigDecimal generatedPrice = lastPrice.multiply(multiplier).setScale(0, RoundingMode.HALF_UP);
 
     return generatedPrice.max(BigDecimal.ONE);
   }
