@@ -4,6 +4,7 @@ import com.stock.domain.stock.entity.StockMaster;
 import com.stock.domain.stock.entity.StockPriceHistory;
 import com.stock.domain.stock.entity.enums.MarketType;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -17,13 +18,24 @@ public class StockSearchResponse {
   private BigDecimal currentPrice;
   private BigDecimal changeRate;
 
-  public static StockSearchResponse of(StockMaster master, StockPriceHistory history) {
+  public static StockSearchResponse of(
+      StockMaster master, StockPriceHistory history, BigDecimal prevDayClose) {
+    BigDecimal currentPrice = history.getClosePrice();
+    BigDecimal changeRate =
+        prevDayClose.compareTo(BigDecimal.ZERO) != 0
+            ? currentPrice
+                .subtract(prevDayClose)
+                .divide(prevDayClose, 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"))
+                .setScale(2, RoundingMode.HALF_UP)
+            : BigDecimal.ZERO;
+
     return StockSearchResponse.builder()
         .stockCode(master.getStockCode())
         .stockName(master.getStockName())
         .market(master.getMarketType())
-        .currentPrice(history.getClosePrice())
-        .changeRate(history.getFluctuationRate())
+        .currentPrice(currentPrice)
+        .changeRate(changeRate)
         .build();
   }
 }
