@@ -7,20 +7,14 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class AccountResponse {
+public class CashResponse {
 
   private Long accountId;
-  private String accountNumber;
-  private String accountName;
-  private String bankCode;
   private BigDecimal cashBalance;
 
-  public static AccountResponse from(SecuritiesAccount account) {
-    return AccountResponse.builder()
+  public static CashResponse from(SecuritiesAccount account) {
+    return CashResponse.builder()
         .accountId(account.getSecuritiesAccountId())
-        .accountNumber(account.getAccountNumber())
-        .accountName(account.getAccountName())
-        .bankCode(account.getBrokerCode())
         .cashBalance(account.getCashBalance())
         .build();
   }

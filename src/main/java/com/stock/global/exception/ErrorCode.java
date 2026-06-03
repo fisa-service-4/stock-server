@@ -33,7 +33,10 @@ public enum ErrorCode {
   EXECUTION_001(HttpStatus.NOT_FOUND, "EXECUTION_001", "체결 내역 없음"),
 
   // HOLDING
-  HOLDING_001(HttpStatus.NOT_FOUND, "HOLDING_001", "보유 종목 없음");
+  HOLDING_001(HttpStatus.NOT_FOUND, "HOLDING_001", "보유 종목 없음"),
+
+  // TRANSFER
+  TRANSFER_002(HttpStatus.BAD_REQUEST, "TRANSFER_002", "잔액이 부족합니다");
 
   private final HttpStatus httpStatus;
   private final String code;
