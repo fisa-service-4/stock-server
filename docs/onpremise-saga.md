@@ -10,190 +10,219 @@
 
 ```
 service-backend
-    ↓  REST
-transaction-server  ← Saga Orchestrator (8083, /baas/v1)
+    ↓  REST (기존 transfer API 그대로)
+transaction-server  ← Saga Orchestrator + 채널계 Orchestration Layer (8083, /baas/v1)
     ↓  OpenFeign                ↓  OpenFeign
 bank-server (8081)        stock-server (8082)
 /internal/v1/bank         /internal/v1/stock
 ```
 
 **원칙:**
-- service-backend는 transaction-server만 호출한다
-- bank-server / stock-server는 transaction-server 내부에서만 호출한다 (외부 직접 접근 금지)
-- Saga는 **동기 REST 호출** 기반으로 구동된다
+- service-backend는 transaction-server만 호출한다. 기존 transfer API를 그대로 사용한다.
+- Saga 유형 판단(bank-to-stock / stock-to-bank / 일반 이체)은 transaction-server 내부에서 수행한다.
+- bank-server / stock-server는 transaction-server 내부에서만 호출한다. 외부 직접 접근 금지.
 
 ---
 
-# 2. 핵심 설계 결정 및 이유
+# 2. 아키텍처 레이어 정의
 
-## 2-1. Saga 구동을 Kafka가 아닌 REST로 한 이유
+## Control Plane — REST Orchestration
 
-Kafka Choreography 방식과 REST Orchestration 방식 중 REST를 선택했다.
+Saga 실행의 제어 흐름. transaction-server가 bank/stock을 동기 REST로 순차 호출하며 성공/실패를 즉시 판단한다. Kafka는 제어 흐름에 관여하지 않는다.
 
-**Kafka Choreography라면:**
 ```
-transaction-server → Kafka: "saga.started"
-bank-server (Consumer) → 이벤트 소비 → Kafka: "bank.transfer.created"
-stock-server (Consumer) → 이벤트 소비 → Kafka: "stock.cash.deposited"
-transaction-server (Consumer) → 이벤트 소비 → 다음 단계 진행
+transaction-server
+  → bank-server: POST /transfers          (결과 즉시 수신)
+  → stock-server: POST /cash/deposit      (결과 즉시 수신)
+  → bank-server: POST /transfers/{id}/approve  (결과 즉시 수신)
 ```
 
-**REST Orchestration (현재):**
+## Event Plane — Outbox → Kafka
+
+transaction-server는 온프레미스 금융 거래의 **source-of-truth event stream 제공자**다. Saga 상태 변화를 Outbox 패턴으로 Kafka에 발행한다. 이 이벤트 스트림은 감사, 알림, 분석 시스템의 단일 진실 공급원으로 사용된다.
+
 ```
-transaction-server → bank-server: POST /transfers        → 즉시 성공/실패 수신
-transaction-server → stock-server: POST /cash/deposit   → 즉시 성공/실패 수신
-transaction-server → bank-server: POST /transfers/{id}/approve
+Saga 상태 변경
+  + OUTBOX_EVENT INSERT (동일 트랜잭션)
+  → OutboxRelayScheduler → Kafka
+  → 감사 / 알림 / 분석 시스템 (downstream)
 ```
+
+transaction-server는 채널계(channel layer) 스타일의 orchestration layer다. 서비스 요청을 수신하고, 내부 코어 서버(bank / stock)를 조율하며, 그 결과를 이벤트 스트림으로 기록한다.
+
+---
+
+# 3. 핵심 설계 결정 및 이유
+
+## 3-1. Saga 진입점 — 기존 transfer API 재사용
+
+**결정:** service-backend는 기존 `POST /baas/v1/bank/transfers`를 그대로 호출한다. saga-specific API(`/saga/bank-to-stock` 등)를 별도로 노출하지 않는다.
+
+**이유:**
+- service-backend 입장에서 "이체"라는 도메인 행위는 동일하다. 목적지가 증권계좌인지 은행계좌인지는 내부 구현 세부사항이다.
+- workflow-specific API를 외부에 노출하면 클라이언트가 Saga 내부 구조에 종속된다.
+- transaction-server가 `toBankCode` / `toAccountNumber`로 이체 유형을 판단해 내부 라우팅한다.
+
+**라우팅 기준:**
+
+| 조건 | 내부 처리 |
+|------|----------|
+| `fromAccountId` = 은행계좌, `toBankCode` = 증권사 코드 | BANK_TO_STOCK Saga |
+| `fromAccountId` = 증권계좌 | STOCK_TO_BANK Saga |
+| 그 외 | 기존 bank-to-bank 이체 |
+
+## 3-2. Saga 구동을 REST로 한 이유 (Kafka Choreography 미선택)
 
 | 비교 항목 | REST Orchestration | Kafka Choreography |
 |-----------|-------------------|--------------------|
 | 실패 감지 | 즉시 (HTTP 응답) | Consumer가 응답 이벤트 대기 |
 | 보상 시점 | 실패 직후 즉시 | 이벤트 도달 후 |
 | 디버깅 | 단일 traceId로 추적 | 여러 서비스 로그 조합 필요 |
-| 구현 복잡도 | Orchestrator 1개에 집중 | 각 서버가 이벤트 흐름 알아야 함 |
-| 네트워크 | AWS↔OnPrem VPN 직접 호출 | Kafka broker 경유 추가 hop |
-| 타임아웃 처리 | OpenFeign 레벨에서 처리 | Correlation ID + 타임아웃 리스너 필요 |
+| 타임아웃 처리 | OpenFeign 레벨 처리 | Correlation ID + 타임아웃 리스너 필요 |
+| 네트워크 | AWS↔OnPrem VPN 직접 | Kafka broker 경유 추가 hop |
 
-AWS-OnPrem VPN 환경에서 Kafka를 Saga driver로 쓰면 이벤트 전달 지연, 순서 보장, 타임아웃 처리를 모든 서버에서 각각 구현해야 한다. REST Orchestration이 이 규모에 훨씬 적합하다.
+Control plane은 REST. Event plane은 Kafka. 둘을 섞지 않는다.
 
-## 2-2. Kafka의 실제 용도
+## 3-3. Kafka를 event plane으로만 사용하는 이유
 
-이 설계에서 Kafka는 **감사(Audit) 및 알림 전용**이다. Saga 진행 자체에 관여하지 않는다.
+transaction-server는 금융 거래의 source-of-truth event stream 제공자다. Saga 생명주기 이벤트를 Outbox를 통해 신뢰성 있게 발행한다. 이 이벤트들은:
+- 감사 시스템에서 거래 추적에 사용
+- 알림 시스템에서 사용자 통지에 사용
+- 분석 시스템에서 데이터 집계에 사용
 
-```
-Saga 실행 완료
-→ transaction-server OutboxRelayScheduler → Kafka
-→ 감사 로그 / 알림 / 분석 시스템 (현재 Consumer 없음, 향후 연동용)
-```
+bank/stock의 개별 step 이벤트는 `saga.completed` payload로 충분히 표현된다. 개별 step 이벤트를 bank/stock에서 직접 발행하면 consistency model이 섞인다(Outbox 보장 vs. best-effort 혼재). bank/stock은 Kafka 발행 없이 REST 응답만 반환한다.
 
-Saga가 이미 완료된 후 그 사실을 외부에 알리는 용도다.
+## 3-4. bank/stock이 Kafka를 직접 발행하지 않는 이유
 
-## 2-3. Outbox를 transaction-server에만 적용한 이유
+**현재 결정: bank/stock Kafka 발행 없음.**
 
-Outbox를 전 서버에 강제하면:
-- bank / stock / transaction 모두 OUTBOX_EVENT 테이블 + RelayScheduler + DLQ 관리 필요
-- 구현 비용 3배, 운영 복잡도 상승
+### 결정 이유
 
-현재 Kafka Consumer가 없으므로 bank/stock의 이벤트 발행 신뢰도가 낮아도 서비스 동작에 영향이 없다. transaction-server의 Saga 생명주기 이벤트는 감사 목적으로 보장이 필요하므로 Outbox 적용. bank/stock은 Kafka 발행 없이 REST 응답만 반환한다.
+**① Consistency model 혼재 문제**
 
-## 2-4. bank/stock Kafka 직접 발행을 제거한 이유
+| 서버 | 발행 방식 | 신뢰도 |
+|------|----------|--------|
+| transaction-server | Outbox (DB 트랜잭션 보장) | 높음 |
+| bank (가정) | 직접 발행 (best-effort) | 낮음 |
+| stock (가정) | 직접 발행 (best-effort) | 낮음 |
 
-현재 Consumer 현황:
+같은 Saga 결과를 표현하는 이벤트들이 신뢰도가 다르면, downstream consumer가 어느 이벤트를 기준으로 삼아야 하는지 불명확해진다. `saga.completed`와 `stock.cash.deposit.completed`가 모두 발행된다면 둘 중 어느 게 권위 있는 이벤트인가?
 
-| 토픽 | Consumer |
-|------|---------|
-| `stock.cash.deposit.completed` | 없음 |
-| `bank.account.withdraw.completed` | 없음 |
-| `saga.completed` | 없음 (향후 감사용) |
+**② 현재 Consumer 없음**
 
-아무도 소비하지 않는 이벤트를 발행하면서 consistency model만 섞인다.
-- transaction-server: Outbox 경유 → 발행 보장
-- stock: 직접 발행 → best effort
-- bank: 직접 발행 → optional
+현재 아무 시스템도 bank/stock의 개별 이벤트를 소비하지 않는다. 발행 비용만 발생하고 이점이 없다.
 
-`saga.completed` 이벤트 payload에 완료된 단계 정보를 담으면 개별 step 이벤트는 중복이다. transaction-server 이벤트만 사용한다.
+**③ 이벤트 중복**
 
-## 2-5. Idempotency 패턴을 bank/stock 통일한 이유
+`saga.completed` payload에 어떤 단계가 완료됐는지(transferId, accountId, amount 등) 포함하면 bank/stock 개별 이벤트는 정보 중복이다.
 
-stock의 deposit/withdraw 중복 실행 위험:
-```
-transaction-server → stock: depositCash()
-  → stock 처리 완료, 응답 전송
-  → 네트워크 timeout (응답 유실)
-transaction-server → retry: depositCash()
-  → double deposit 발생
-```
+**④ 장애 포인트 증가**
 
-이를 막기 위해 stock도 bank처럼 `Idempotency-Key` 헤더 기반 deduplication을 사용한다.
-
-**bank 방식:**
-- `createTransfer` 호출 시 `Idempotency-Key` 헤더 전달
-- bank-server가 해당 키로 중복 처리
-
-**stock 통일 방식:**
-- `depositCash` / `withdrawCash` 호출 시 `Idempotency-Key` 헤더 전달
-- transaction-server가 sagaId 기반으로 operation별 키 생성
-- stock-server가 해당 키로 중복 처리
-
-```
-deposit 호출:              Idempotency-Key: "{sagaId}_DEPOSIT"
-withdraw 호출:             Idempotency-Key: "{sagaId}_WITHDRAW"
-compensation deposit 호출: Idempotency-Key: "{sagaId}_COMPENSATION_DEPOSIT"
-compensation withdraw 호출: Idempotency-Key: "{sagaId}_COMPENSATION_WITHDRAW"
-```
-
-stock-server는 Saga 개념을 알 필요 없이 표준 Idempotency-Key 패턴만 구현하면 된다. bank와 동일한 인터페이스로 통일된다.
-
-**sagaId를 body에 포함하지 않는 이유:**
-- deduplication 역할을 Idempotency-Key 헤더가 담당하므로 sagaId의 존재 이유가 없어짐
-- stock-server가 Saga 내부 개념(sagaId)을 알게 되면 레이어 분리가 깨짐
+bank/stock에서 직접 발행하면 "비즈니스 처리 성공 + Kafka 발행 실패"가 독립적으로 발생할 수 있다. Outbox 없이는 이 불일치를 복구할 방법이 없다.
 
 ---
 
-# 3. bank 담당자에게 전달할 내용
+### bank/stock이 Kafka를 발행하려면 추가로 필요한 것
 
-## 3-1. 기존 API 활용 (변경 없음)
+만약 향후 bank/stock이 직접 Kafka를 발행해야 하는 요구사항이 생긴다면, 아래가 추가로 필요하다. **직접 발행(best-effort)과 Outbox 보장 방식으로 나뉜다.**
 
-현재 Saga 설계에서 bank-server의 기존 API를 그대로 활용한다. 신규 구현 필요 없음.
+**방식 A — 직접 발행 (best-effort, 권장하지 않음)**
+
+각 서버에 추가 필요:
+- Kafka producer 설정 (`spring-kafka`, bootstrap-servers 등)
+- 비즈니스 로직 내 `kafkaTemplate.send()` 호출
+- 발행 실패 시 복구 방법 없음 (이벤트 유실 허용 결정 필요)
+
+문제: 비즈니스 DB 커밋 성공 후 Kafka 발행 실패 시 이벤트 유실. consistency model이 깨짐.
+
+**방식 B — Outbox 패턴 (신뢰성 보장, 구현 비용 높음)**
+
+각 서버에 추가 필요:
+- `OUTBOX_EVENT` 테이블 (bank DB, stock DB 각각)
+- 비즈니스 처리 + OUTBOX_EVENT INSERT를 동일 트랜잭션으로 묶는 로직
+- `OutboxRelayScheduler` (@Scheduled, 각 서버별 독립 구현)
+- Kafka 발행 실패 시 retry 로직 (retry_count 관리)
+- `DEAD_LETTER_EVENT` 테이블 + 처리 로직 (3회 실패 이벤트)
+- Scheduler / DLQ 모니터링 운영 체계
+
+즉, transaction-server에 구현된 Outbox 인프라를 bank/stock에도 각각 복제해야 한다. 구현 비용과 운영 복잡도가 3배가 된다.
+
+## 3-4. Outbox를 transaction-server에만 적용한 이유
+
+Outbox를 전 서버에 강제하면 bank/stock/transaction 모두 OUTBOX_EVENT 테이블 + RelayScheduler + DLQ 관리가 필요하다. 현재 Kafka Consumer가 없으므로 bank/stock 이벤트 신뢰도가 낮아도 서비스에 영향이 없다. transaction-server의 Saga 이벤트는 source-of-truth이므로 Outbox로 보장한다.
+
+| 모델                    | 추천도   | 현실성   | MSA purity | 구현난이도 |
+| --------------------- | ----- | ----- | ---------- | ----- |
+| **1. 현재 모델**          | ⭐⭐⭐⭐⭐ | 매우 높음 | 중간         | 낮음    |
+| **2. 각 서버가 direct publish** | ⭐     | 낮음    | 애매         | 중간    |
+| **3. 각 서버 all outbox**     | ⭐⭐⭐   | 높음    | 높음         | 매우 높음 |
+
+
+## 3-5. Idempotency 패턴을 bank/stock 동일하게 구성한 이유
+
+Feign 타임아웃 후 재시도 시 stock에서 double deposit이 발생할 수 있다. bank는 이미 `Idempotency-Key` 헤더로 중복을 처리한다. stock도 동일한 헤더 기반 패턴을 적용해 인터페이스를 통일한다. transaction-server가 operation별 키를 생성해서 헤더로 전달하므로 stock-server는 Saga 개념을 알 필요 없다.
+
+---
+
+# 4. bank 담당자에게 전달할 내용
+
+## 4-1. 기존 API 활용 (변경 없음)
+
+현재 Saga 설계에서 bank-server의 기존 API를 그대로 활용한다.
 
 | 단계 | 메서드 | 경로 | 동작 |
 |------|--------|------|------|
-| Transfer 생성 | POST | `/internal/v1/bank/transfers` | 이체 레코드 생성 → `REQUESTED` 반환 (잔액 변동 없음) |
+| Transfer 생성 | POST | `/internal/v1/bank/transfers` | 이체 레코드 생성 → `REQUESTED` 반환 **(잔액 변동 없음)** |
 | Transfer 확정 | POST | `/internal/v1/bank/transfers/{id}/approve` | 잔액 검증 + 실제 출금/입금 실행 → `SUCCESS` 반환 |
+| Transfer 조회 | GET | `/internal/v1/bank/transfers/{id}` | 상태 조회 (approve timeout 후 상태 확인에 사용) |
 
 **Idempotency 현황 (이미 충족):**
 - `createTransfer`: `Idempotency-Key` 헤더로 중복 생성 방지 ✅
 - `approveTransfer`: 동일 transferId 재호출 시 `TRANSFER_003` 반환 (자연 멱등) ✅
 
-## 3-2. "Reserve"가 아닌 이유 (명칭 수정 제안)
+## 4-2. "Reserve"가 아닌 이유 (명칭 수정)
 
-현재 Saga 문서에서 `createTransfer`를 "Reserve"로 표현했으나, 실제 동작은 **잔액을 잠그지 않는다**. 이체 레코드만 INSERT하고 잔액은 `approve` 시점에 처음 차감된다.
+`createTransfer`를 "Reserve"로 표현했으나 실제 동작은 잔액을 잠그지 않는다. 이체 레코드만 INSERT하고 잔액은 `approve` 시점에 처음 차감된다.
 
 실질적 의미: **pending intent recording** (이체 의도 기록)
 
-Saga step명을 `BANK_TRANSFER_RESERVE` → `BANK_TRANSFER_REQUEST_CREATED`로 변경 예정. bank-server 구현에는 영향 없음.
+Saga step명을 `BANK_TRANSFER_REQUEST_CREATED`로 사용한다. bank-server 구현에는 영향 없음.
 
-## 3-3. cancel API 추가 — 협의 사항 (강제 아님)
+## 4-3. cancel API 추가 — 협의 사항 (최종 선택은 bank 담당자)
 
 **배경:**
 
-BANK_TO_STOCK Saga에서 STEP 2(stock deposit)가 실패하면:
-- `approve`를 호출하지 않으므로 잔액 변동은 없음 (금융 정합성 이상 없음)
-- `REQUESTED` 상태의 이체 레코드가 bank DB에 남음
-- 현재 설계: Reconciliation 배치가 주기적으로 정리
+STEP 2(stock deposit) 실패 시 approve를 호출하지 않아 잔액 변동은 없다. 단, `REQUESTED` 상태 이체 레코드가 bank DB에 남는다.
 
-**cancel API가 있다면:**
-```
-STEP 2 실패
-→ POST /internal/v1/bank/transfers/{id}/cancel
+**cancel API 추가 시:**
+```http
+POST /internal/v1/bank/transfers/{id}/cancel
 → REQUESTED → CANCELLED 즉시 처리
-→ 배치 의존 없음
 ```
+구현: `UPDATE transfer SET status = 'CANCELLED' WHERE id = ? AND status = 'REQUESTED'`
 
 **추가를 권장하는 이유:**
-- 구현 단순: `UPDATE transfer SET status = 'CANCELLED' WHERE id = ? AND status = 'REQUESTED'`
+- Saga Case A가 배치 의존 없이 즉시 명시적으로 종료됨
 - transfer 테이블에 의미 없는 REQUESTED 레코드 누적 방지
-- Saga Case A가 배치 의존 없이 즉시 정리됨
 - Reconciliation 배치의 책임 범위 감소
+- 구현 난이도 매우 낮음
 
 **추가하지 않아도 되는 이유:**
-- REQUESTED 상태는 잔액 변동이 없으므로 금융 정합성에 영향 없음
+- 잔액 변동이 없으므로 금융 정합성에 영향 없음
 - Reconciliation 배치로 eventual consistency 보장
 - bank API 표면 확장 최소화 가능
 
-**결정 권한:** bank 담당자. cancel API 없이 진행할 경우 Reconciliation이 Case A를 처리하는 방식으로 문서 확정.
+cancel API 없이 진행할 경우 Case A는 Reconciliation 배치 정리 방식으로 확정.
 
 ---
 
-# 4. 서버별 구현 내용
+# 5. 서버별 구현 내용
 
-## 4-1. bank-server
+## 5-1. bank-server
 
-**신규 구현 없음.** 기존 `createTransfer` / `approveTransfer` 사용.
+**신규 구현 없음.** 기존 API 사용. Kafka 발행 없음.
 
-Kafka 발행 없음.
-
-## 4-2. stock-server
+## 5-2. stock-server
 
 **신규 구현 대상:**
 
@@ -206,7 +235,7 @@ Kafka 발행 없음.
 ```
 X-User-Id: {userId}
 X-Trace-Id: {traceId}
-Idempotency-Key: {sagaId}_{OPERATION_TYPE}   ← transaction-server가 생성해서 전달
+Idempotency-Key: {sagaId}_{OPERATION_TYPE}    ← transaction-server가 생성해서 전달
 ```
 
 **Request body:**
@@ -223,7 +252,7 @@ Idempotency-Key: {sagaId}_{OPERATION_TYPE}   ← transaction-server가 생성해
 
 **Idempotency 구현 (bank와 동일 패턴):**
 - `Idempotency-Key` 헤더 수신
-- 동일 키로 이미 처리된 요청이면 저장된 응답 반환
+- 동일 키가 이미 처리됐으면 저장된 응답 반환
 - 신규 요청이면 처리 후 결과 저장
 
 Kafka 발행 없음.
@@ -231,9 +260,9 @@ Kafka 발행 없음.
 **구현 필요 사항:**
 - `CashService`: `deposit(accountId, amount, idempotencyKey)` / `withdraw(accountId, amount, idempotencyKey)`
 - `CashController`: 위 2개 엔드포인트
-- stock 자체 idempotency 저장 로직 (Idempotency-Key 기반)
+- Idempotency-Key 기반 중복 처리 로직
 
-## 4-3. transaction-server
+## 5-3. transaction-server
 
 **전체 신규 구현 대상.**
 
@@ -241,15 +270,13 @@ Kafka 발행 없음.
 
 | 패키지 | 구현 내용 |
 |--------|-----------|
-| `domain/saga` | SagaTransaction, SagaStepHistory Entity/Repo, SagaOrchestrator, SagaController |
+| `domain/saga` | SagaTransaction, SagaStepHistory Entity/Repo, SagaOrchestrator |
 | `domain/outbox` | OutboxEvent Entity/Repo, OutboxService, OutboxRelayScheduler |
 | `domain/deadletter` | DeadLetterEvent Entity/Repo, DeadLetterService |
 | `domain/reconciliation` | ReconciliationResult Entity/Repo, ReconciliationService |
 | `global` | IdempotencyKey Entity/Repo, TransactionAuditLog Entity/Repo, IdempotencyService, AuditService, KafkaConfig |
 
 ### StockCoreClient 추가 메서드
-
-기존 `StockCoreClient`에 2개 추가:
 
 ```java
 @PostMapping("/internal/v1/stock/accounts/{accountId}/cash/deposit")
@@ -274,42 +301,24 @@ ApiResponse<StockCashResponse> withdrawCash(
 
 **Idempotency-Key 생성 규칙 (transaction-server 내부):**
 
-| 호출 | 키 |
-|------|----|
+| 호출 대상 | 생성 키 |
+|-----------|---------|
 | 정상 deposit | `{sagaId}_DEPOSIT` |
 | 정상 withdraw | `{sagaId}_WITHDRAW` |
 | compensation deposit | `{sagaId}_COMPENSATION_DEPOSIT` |
 | compensation withdraw | `{sagaId}_COMPENSATION_WITHDRAW` |
 
-### Saga API 엔드포인트
+### 내부 라우팅 로직
 
 ```
-POST /baas/v1/saga/bank-to-stock   Header: Idempotency-Key, X-Firebase-Uid
-POST /baas/v1/saga/stock-to-bank   Header: Idempotency-Key, X-Firebase-Uid
-GET  /baas/v1/saga/{sagaId}
-GET  /baas/v1/saga/{sagaId}/steps
-```
-
-**BANK_TO_STOCK 요청:**
-```json
-{
-  "fromBankAccountId": 1001,
-  "toStockAccountId": 2001,
-  "toBankCode": "039",
-  "toAccountNumber": "300-123-456789",
-  "amount": 500000
-}
-```
-
-**STOCK_TO_BANK 요청:**
-```json
-{
-  "fromStockAccountId": 2001,
-  "toBankAccountId": 1001,
-  "toBankCode": "088",
-  "toAccountNumber": "110-123-456789",
-  "amount": 500000
-}
+POST /baas/v1/bank/transfers 수신
+    ↓
+fromAccountId 계좌 유형 조회
+    ↓
+├── 은행계좌 → 목적지 분석
+│       ├── toBankCode = 증권사 코드 → BANK_TO_STOCK Saga
+│       └── 그 외                  → 기존 bank-to-bank 이체
+└── 증권계좌 → STOCK_TO_BANK Saga
 ```
 
 ### OutboxRelayScheduler
@@ -337,14 +346,17 @@ void relay() {
 
 ---
 
-# 5. Saga 흐름
+# 6. Saga 흐름
 
-## 5-1. BANK_TO_STOCK 성공 흐름
+## 6-1. BANK_TO_STOCK 성공 흐름
 
 ```
-[Client] POST /baas/v1/saga/bank-to-stock  Header: Idempotency-Key
+[service-backend] POST /baas/v1/bank/transfers
+Header: Idempotency-Key: {uuid}, X-User-Id: {userId}, X-Trace-Id: {traceId}
+Body: { fromAccountId: 1001, toBankCode: "039", toAccountNumber: "...", transferAmount: 500000 }
     ↓
-[transaction-server]
+[transaction-server] 라우팅: toBankCode = 증권사 → BANK_TO_STOCK Saga
+
   1. IdempotencyService.check(idempotencyKey)
      → 이미 존재하면 저장된 응답 반환 (종료)
   2. SagaTransaction INSERT (STARTED)
@@ -353,9 +365,9 @@ void relay() {
 
   ─── STEP 1: BANK_TRANSFER_REQUEST_CREATED ───────────────────────
   3. BankCoreClient.createTransfer(fromAccountId, toBankCode, toAccountNumber, amount)
-     Header: Idempotency-Key = {originalIdempotencyKey}
-     → bank: transfer INSERT, 잔액 변동 없음 → REQUESTED 반환
-     → SagaStepHistory INSERT (BANK_TRANSFER_REQUEST_CREATED, SUCCESS, transferId 저장)
+     Header: Idempotency-Key = {idempotencyKey}
+     → bank: transfer INSERT, 잔액 변동 없음 → REQUESTED 반환, transferId 수신
+     → SagaStepHistory INSERT (BANK_TRANSFER_REQUEST_CREATED, SUCCESS)
 
   ─── STEP 2: STOCK_CASH_DEPOSIT ──────────────────────────────────
   4. StockCoreClient.depositCash(toStockAccountId, amount)
@@ -365,7 +377,7 @@ void relay() {
 
   ─── STEP 3: BANK_TRANSFER_COMMIT ────────────────────────────────
   5. BankCoreClient.approveTransfer(transferId)
-     → bank: 잔액 검증 + 실제 출금 실행 → SUCCESS 반환
+     → bank: 잔액 검증 + 실제 출금 실행 → SUCCESS
      → SagaStepHistory INSERT (BANK_TRANSFER_COMMIT, SUCCESS)
      → SagaTransaction UPDATE (SUCCESS)
      + OutboxEvent INSERT (saga.completed)
@@ -374,7 +386,7 @@ void relay() {
      → IdempotencyService.complete(idempotencyKey, response)
 ```
 
-## 5-2. BANK_TO_STOCK 실패 흐름
+## 6-2. BANK_TO_STOCK 실패 흐름
 
 ### Case A — STEP 2 실패 (stock deposit 오류)
 
@@ -388,16 +400,16 @@ SagaTransaction UPDATE (FAILED)
 → 동일 트랜잭션 Commit
 
 [cancel API 있는 경우]
-BankCoreClient.cancelTransfer(transferId) → REQUESTED → CANCELLED
+  BankCoreClient.cancelTransfer(transferId) → REQUESTED → CANCELLED
 
 [cancel API 없는 경우]
-REQUESTED 이체 방치 → Reconciliation 배치 주기적 정리
+  REQUESTED 이체 방치 → Reconciliation 배치 주기적 정리
 ```
 
-### Case B — STEP 3 실패 (bank approve 오류, stock은 이미 예수금 증가)
+### Case B — STEP 3 실패 (bank approve 오류, stock 예수금 이미 증가)
 
 ```
-BankCoreClient.approveTransfer() 실패
+BankCoreClient.approveTransfer() → 명확한 실패 응답 수신
     ↓
 SagaStepHistory INSERT (BANK_TRANSFER_COMMIT, FAILED)
 SagaTransaction UPDATE (COMPENSATING)
@@ -414,12 +426,34 @@ SagaTransaction UPDATE (COMPENSATING)
   → 동일 트랜잭션 Commit
 ```
 
-## 5-3. STOCK_TO_BANK 성공 흐름
+### Case UNKNOWN — STEP 3 timeout (approve 결과 불명)
+
+분산 환경에서 네트워크 timeout 시 bank가 실제로 처리했는지 알 수 없다. 가장 위험한 케이스.
 
 ```
-[Client] POST /baas/v1/saga/stock-to-bank  Header: Idempotency-Key
+BankCoreClient.approveTransfer() → Feign timeout (응답 없음)
     ↓
-[transaction-server]
+즉시 실패로 처리하지 않고 상태 조회 시도
+
+  1. BankCoreClient.getTransfer(transferId) 조회
+     ├── SUCCESS   → bank 처리 완료 → Saga SUCCESS로 처리
+     ├── REQUESTED → bank 미처리 → Case B(Compensation) 흐름으로 처리
+     └── 조회도 실패 / 응답 없음
+         → SagaTransaction UPDATE (UNKNOWN)
+         + OutboxEvent INSERT (saga.unknown)
+         → 수동 개입 필요 (운영팀 알림)
+
+UNKNOWN 상태: 자동 처리 불가. 운영팀이 bank/stock 원장 직접 확인 후 수동 완료 또는 보상 처리.
+```
+
+## 6-3. STOCK_TO_BANK 성공 흐름
+
+```
+[service-backend] POST /baas/v1/bank/transfers
+Body: { fromAccountId: 2001 (증권계좌), toBankCode: "088", toAccountNumber: "...", amount: 500000 }
+    ↓
+[transaction-server] 라우팅: fromAccountId = 증권계좌 → STOCK_TO_BANK Saga
+
   1. IdempotencyService.check()
   2. SagaTransaction INSERT (STARTED) + OutboxEvent (saga.started)
 
@@ -430,8 +464,8 @@ SagaTransaction UPDATE (COMPENSATING)
      → SagaStepHistory INSERT (STOCK_CASH_WITHDRAW, SUCCESS)
 
   ─── STEP 2: BANK_TRANSFER_REQUEST_CREATED ───────────────────────
-  4. BankCoreClient.createTransfer(은행계좌 정보, amount)
-     Header: Idempotency-Key = {originalIdempotencyKey}
+  4. BankCoreClient.createTransfer(계좌 정보, amount)
+     Header: Idempotency-Key = {idempotencyKey}
      → bank: transfer REQUESTED
      → SagaStepHistory INSERT (BANK_TRANSFER_REQUEST_CREATED, SUCCESS)
 
@@ -443,84 +477,97 @@ SagaTransaction UPDATE (COMPENSATING)
      → AuditLog + IdempotencyKey 완료
 ```
 
-## 5-4. STOCK_TO_BANK 실패 흐름
+## 6-4. STOCK_TO_BANK 실패 흐름
 
-### STEP 1 실패 (stock withdraw 오류 — 잔액 부족 등)
+### STEP 1 실패 (stock withdraw 오류)
 
 ```
-StockCoreClient.withdrawCash() 실패
+StockCoreClient.withdrawCash() 실패 (TRANSFER_002 잔액 부족 등)
     ↓
 SagaStepHistory INSERT (STOCK_CASH_WITHDRAW, FAILED)
 SagaTransaction UPDATE (FAILED) + OutboxEvent (saga.failed)
 → 보상 없음 (stock 변동 없음, bank 미호출)
 ```
 
-### STEP 2/3 실패 (bank 오류, stock 예수금은 이미 차감됨)
+### STEP 2/3 실패 또는 STEP 3 UNKNOWN (stock 예수금 이미 차감)
 
 ```
-STEP 2 또는 STEP 3 실패
+STEP 2 또는 STEP 3 실패 / timeout
     ↓
-SagaTransaction UPDATE (COMPENSATING) + OutboxEvent (saga.compensation.started)
+[실패] SagaTransaction UPDATE (COMPENSATING)
+[timeout] 상태 조회 후 미처리 확인 → COMPENSATING
+
++ OutboxEvent INSERT (saga.compensation.started)
 
   ─── COMPENSATION: STOCK_CASH_DEPOSIT ────────────────────────────
   StockCoreClient.depositCash(fromStockAccountId, amount)
   Header: Idempotency-Key = "{sagaId}_COMPENSATION_DEPOSIT"
   → stock: 예수금 복구
-  → SagaStepHistory INSERT (STOCK_CASH_DEPOSIT_COMPENSATION, COMPENSATED)
   → SagaTransaction UPDATE (COMPENSATED) + OutboxEvent (saga.compensation.completed)
 ```
 
 ---
 
-# 6. Kafka 이벤트
+# 7. Kafka 이벤트
 
-## 6-1. transaction-server 발행 (Outbox 경유 — 보장됨)
+## 7-1. transaction-server 발행 (Outbox 경유 — 보장됨)
 
-| 토픽 | 발행 시점 |
-|------|-----------|
-| `saga.started` | Saga 시작 |
-| `saga.completed` | 모든 단계 성공 |
-| `saga.failed` | 단계 실패, 보상 불필요 |
-| `saga.compensation.started` | 보상 트랜잭션 시작 |
-| `saga.compensation.completed` | 보상 완료 |
+transaction-server가 온프레미스 금융 거래의 source-of-truth event stream을 제공한다.
 
-## 6-2. bank-server / stock-server
+| 토픽 | 발행 시점 | 주요 payload |
+|------|-----------|-------------|
+| `saga.started` | Saga 시작 | sagaId, sagaType, amount |
+| `saga.completed` | 모든 단계 성공 | sagaId, steps 결과 |
+| `saga.failed` | 단계 실패, 보상 불필요 | sagaId, failedStep, reason |
+| `saga.compensation.started` | 보상 트랜잭션 시작 | sagaId, compensationTarget |
+| `saga.compensation.completed` | 보상 완료 | sagaId |
+| `saga.unknown` | approve timeout, 상태 불명 | sagaId, transferId |
 
-**Kafka 발행 없음.**
+## 7-2. bank-server / stock-server
 
-transaction-server의 `saga.completed` payload에 완료 단계 정보를 포함하면 개별 step 이벤트는 중복이다. 현재 Consumer가 없으므로 bank/stock에서 직접 발행하지 않는다.
+**Kafka 발행 없음.** REST 응답만 반환.
+
+발행하지 않는 이유 및 발행 시 추가 필요사항 → 섹션 3-4 참조.
 
 ---
 
-# 7. 내부 API 목록
+# 8. 외부 API (service-backend 호출 대상)
 
-## 7-1. bank-server (기존 구현 완료)
+기존 transfer API를 그대로 사용한다. saga-specific 엔드포인트 없음.
+
+| 메서드 | 경로 | 용도 |
+|--------|------|------|
+| POST | `/baas/v1/bank/transfers` | 이체 요청 (내부 라우팅으로 Saga 또는 일반 이체) |
+| GET | `/baas/v1/bank/transfers/{transferId}` | 이체 결과 조회 |
+
+**요청 헤더:**
+```
+Idempotency-Key: {uuid}
+X-User-Id: {userId}
+X-Trace-Id: {traceId}
+```
+
+# 9. 내부 API 목록
+
+## 9-1. bank-server (기존 구현 완료)
 
 | 메서드 | 경로 | 구현 상태 |
 |--------|------|-----------|
 | POST | `/internal/v1/bank/transfers` | ✅ 완료 |
 | POST | `/internal/v1/bank/transfers/{id}/approve` | ✅ 완료 |
+| GET | `/internal/v1/bank/transfers/{id}` | ✅ 완료 |
 | POST | `/internal/v1/bank/transfers/{id}/cancel` | ⬜ 협의 중 (bank 담당자 결정) |
 
-## 7-2. stock-server (신규 구현)
+## 9-2. stock-server (신규 구현)
 
 | 메서드 | 경로 | 구현 상태 |
 |--------|------|-----------|
 | POST | `/internal/v1/stock/accounts/{accountId}/cash/deposit` | ❌ 미구현 |
 | POST | `/internal/v1/stock/accounts/{accountId}/cash/withdraw` | ❌ 미구현 |
 
-## 7-3. transaction-server Saga API (신규 구현)
-
-| 메서드 | 경로 | 구현 상태 |
-|--------|------|-----------|
-| POST | `/baas/v1/saga/bank-to-stock` | ❌ 미구현 |
-| POST | `/baas/v1/saga/stock-to-bank` | ❌ 미구현 |
-| GET | `/baas/v1/saga/{sagaId}` | ❌ 미구현 |
-| GET | `/baas/v1/saga/{sagaId}/steps` | ❌ 미구현 |
-
 ---
 
-# 8. 구현 순서
+# 10. 구현 순서
 
 ```
 [1] transaction-server — DB 엔티티 / 레포지토리
@@ -533,11 +580,11 @@ transaction-server의 `saga.completed` payload에 완료 단계 정보를 포함
     └─ CashController
 
 [3] transaction-server — StockCoreClient 확장
-    └─ depositCash() / withdrawCash() 추가 (Idempotency-Key 헤더 포함)
+    └─ depositCash() / withdrawCash() (Idempotency-Key 헤더 포함)
 
-[4] transaction-server — BANK_TO_STOCK 성공 흐름
+[4] transaction-server — 내부 라우팅 + BANK_TO_STOCK 성공 흐름
+    └─ SagaOrchestrator.route() (계좌 유형 판단)
     └─ SagaOrchestrator.bankToStock()
-    └─ SagaController
 
 [5] transaction-server — Idempotency + Audit
     └─ IdempotencyService
@@ -548,16 +595,17 @@ transaction-server의 `saga.completed` payload에 완료 단계 정보를 포함
     └─ OutboxRelayScheduler
     └─ KafkaConfig
 
-[7] transaction-server — 실패 / Compensation 흐름
+[7] transaction-server — 실패 / Compensation / UNKNOWN 흐름
     └─ Case A (STEP 2 실패)
     └─ Case B (STEP 3 실패 + Compensation)
+    └─ UNKNOWN (timeout → 상태 조회 → 분기)
 
 [8] transaction-server — STOCK_TO_BANK 흐름
 ```
 
 ---
 
-# 9. SagaStepName 열거형
+# 11. SagaStepName 열거형
 
 | 값 | 방향 | 설명 |
 |----|------|------|
@@ -570,7 +618,7 @@ transaction-server의 `saga.completed` payload에 완료 단계 정보를 포함
 
 ---
 
-# 10. SagaTransaction 상태 전이
+# 12. SagaTransaction 상태 전이
 
 ```
 STARTED
@@ -580,20 +628,25 @@ STARTED
 PROCESSING
   → (단계 실패, 보상 불필요) FAILED
   → (단계 실패, 보상 필요) COMPENSATING
+  → (approve timeout, 상태 조회 실패) UNKNOWN
 
 COMPENSATING
   → (보상 성공) COMPENSATED
-  → (보상 실패) COMPENSATION_FAILED  ← 수동 처리 필요
+  → (보상 실패) COMPENSATION_FAILED
+
+UNKNOWN           ← 수동 개입 필요
+COMPENSATION_FAILED ← 수동 개입 필요
 ```
 
 ---
 
-# 11. 공통 헤더 규칙
+# 13. 고려사항 및 제약
 
-```http
-X-User-Id: {xUserId}       ← transaction-server가 내부 호출 시 자동 주입
-X-Trace-Id: {uuid}         ← 없으면 UUID 자동 생성
-Idempotency-Key: {key}     ← 이체/deposit/withdraw API 필수
-```
-
-JWT 인증 없음. transaction-server가 인증 완료 후 내부 호출하는 구조.
+| 항목 | 내용 |
+|------|------|
+| approve timeout | bank GET으로 상태 확인 후 분기. 확인 불가 시 UNKNOWN |
+| UNKNOWN 처리 | 자동 처리 불가. 운영팀 수동 확인 필요. saga.unknown Kafka 이벤트로 알림 |
+| COMPENSATION_FAILED | 보상도 실패한 경우. 원장 불일치 상태. 수동 처리 필요 |
+| Case A cancel API 미보유 | REQUESTED 이체는 Reconciliation 배치로 주기 정리 |
+| stock cash idempotency | Idempotency-Key 헤더 기반. 동일 키 재요청 시 캐시 응답 반환 |
+| bank reserve 의미 | 잔액 잠금 없음. 이체 의도 기록만 함. approve 시점에 잔액 검증 |
