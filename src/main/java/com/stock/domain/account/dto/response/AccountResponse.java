@@ -1,6 +1,7 @@
 package com.stock.domain.account.dto.response;
 
 import com.stock.domain.account.entity.SecuritiesAccount;
+import java.math.BigDecimal;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -12,6 +13,7 @@ public class AccountResponse {
   private String accountNumber;
   private String accountName;
   private String bankCode;
+  private BigDecimal cashBalance;
 
   public static AccountResponse from(SecuritiesAccount account) {
     return AccountResponse.builder()
@@ -19,6 +21,7 @@ public class AccountResponse {
         .accountNumber(account.getAccountNumber())
         .accountName(account.getAccountName())
         .bankCode(account.getBrokerCode())
+        .cashBalance(account.getCashBalance())
         .build();
   }
 }
