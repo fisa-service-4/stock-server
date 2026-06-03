@@ -83,14 +83,23 @@ transaction-server는 채널계(channel layer) 스타일의 orchestration layer�
 
 Control plane은 REST. Event plane은 Kafka. 둘을 섞지 않는다.
 
-## 3-3. Kafka를 event plane으로만 사용하는 이유
+## 3-3. Kafka의 역할 정의
 
-transaction-server는 금융 거래의 source-of-truth event stream 제공자다. Saga 생명주기 이벤트를 Outbox를 통해 신뢰성 있게 발행한다. 이 이벤트들은:
-- 감사 시스템에서 거래 추적에 사용
-- 알림 시스템에서 사용자 통지에 사용
-- 분석 시스템에서 데이터 집계에 사용
+> **Kafka는 현재 Saga 제어에 사용되지 않는다.
+> 현재 단계에서는 Audit/Event Streaming 목적으로만 사용하며,
+> 향후 Notification/Analytics 서비스 연계 시 활용한다.**
 
-bank/stock의 개별 step 이벤트는 `saga.completed` payload로 충분히 표현된다. 개별 step 이벤트를 bank/stock에서 직접 발행하면 consistency model이 섞인다(Outbox 보장 vs. best-effort 혼재). bank/stock은 Kafka 발행 없이 REST 응답만 반환한다.
+transaction-server는 온프레미스 금융 거래의 source-of-truth event stream 제공자다. Saga 생명주기 이벤트를 Outbox를 통해 신뢰성 있게 발행한다.
+
+발행 토픽 (4종):
+```
+saga.started
+saga.completed
+saga.failed
+saga.compensated
+```
+
+bank/stock은 REST Core Service로 남는다. Kafka 발행 없음. transaction-server만 발행한다.
 
 ## 3-4. bank/stock이 Kafka를 직접 발행하지 않는 이유
 
@@ -147,7 +156,7 @@ bank/stock에서 직접 발행하면 "비즈니스 처리 성공 + Kafka 발행 
 
 즉, transaction-server에 구현된 Outbox 인프라를 bank/stock에도 각각 복제해야 한다. 구현 비용과 운영 복잡도가 3배가 된다.
 
-## 3-4. Outbox를 transaction-server에만 적용한 이유
+## 3-5. Outbox를 transaction-server에만 적용한 이유
 
 Outbox를 전 서버에 강제하면 bank/stock/transaction 모두 OUTBOX_EVENT 테이블 + RelayScheduler + DLQ 관리가 필요하다. 현재 Kafka Consumer가 없으므로 bank/stock 이벤트 신뢰도가 낮아도 서비스에 영향이 없다. transaction-server의 Saga 이벤트는 source-of-truth이므로 Outbox로 보장한다.
 
@@ -158,7 +167,7 @@ Outbox를 전 서버에 강제하면 bank/stock/transaction 모두 OUTBOX_EVENT 
 | **3. 각 서버 all outbox**     | ⭐⭐⭐   | 높음    | 높음         | 매우 높음 |
 
 
-## 3-5. Idempotency 패턴을 bank/stock 동일하게 구성한 이유
+## 3-6. Idempotency 패턴을 bank/stock 동일하게 구성한 이유
 
 Feign 타임아웃 후 재시도 시 stock에서 double deposit이 발생할 수 있다. bank는 이미 `Idempotency-Key` 헤더로 중복을 처리한다. stock도 동일한 헤더 기반 패턴을 적용해 인터페이스를 통일한다. transaction-server가 operation별 키를 생성해서 헤더로 전달하므로 stock-server는 Saga 개념을 알 필요 없다.
 
@@ -188,31 +197,23 @@ Feign 타임아웃 후 재시도 시 stock에서 double deposit이 발생할 수
 
 Saga step명을 `BANK_TRANSFER_REQUEST_CREATED`로 사용한다. bank-server 구현에는 영향 없음.
 
-## 4-3. cancel API 추가 — 협의 사항 (최종 선택은 bank 담당자)
+## 4-3. cancel API 추가 — 구현 확정
 
-**배경:**
+**결정: cancel API 구현한다.**
 
-STEP 2(stock deposit) 실패 시 approve를 호출하지 않아 잔액 변동은 없다. 단, `REQUESTED` 상태 이체 레코드가 bank DB에 남는다.
+STEP 2(stock deposit) 실패 시 approve를 호출하지 않아 잔액 변동은 없지만, `REQUESTED` 상태 이체 레코드가 bank DB에 남는다. cancel API로 즉시 명시적으로 종료한다.
 
-**cancel API 추가 시:**
 ```http
 POST /internal/v1/bank/transfers/{id}/cancel
-→ REQUESTED → CANCELLED 즉시 처리
+→ REQUESTED → CANCELLED
 ```
+
 구현: `UPDATE transfer SET status = 'CANCELLED' WHERE id = ? AND status = 'REQUESTED'`
 
-**추가를 권장하는 이유:**
-- Saga Case A가 배치 의존 없이 즉시 명시적으로 종료됨
+**결정 이유:**
+- Reconciliation 배치 의존 없이 Case A가 즉시 종료됨
 - transfer 테이블에 의미 없는 REQUESTED 레코드 누적 방지
-- Reconciliation 배치의 책임 범위 감소
-- 구현 난이도 매우 낮음
-
-**추가하지 않아도 되는 이유:**
-- 잔액 변동이 없으므로 금융 정합성에 영향 없음
-- Reconciliation 배치로 eventual consistency 보장
-- bank API 표면 확장 최소화 가능
-
-cancel API 없이 진행할 경우 Case A는 Reconciliation 배치 정리 방식으로 확정.
+- 구현 난이도 매우 낮음 (단순 UPDATE 1건)
 
 ---
 
@@ -413,7 +414,7 @@ BankCoreClient.approveTransfer() → 명확한 실패 응답 수신
     ↓
 SagaStepHistory INSERT (BANK_TRANSFER_COMMIT, FAILED)
 SagaTransaction UPDATE (COMPENSATING)
-+ OutboxEvent INSERT (saga.compensation.started)
++ OutboxEvent INSERT (saga.compensated (보상 시작))
 → 동일 트랜잭션 Commit
 
   ─── COMPENSATION: STOCK_CASH_WITHDRAW ───────────────────────────
@@ -422,7 +423,7 @@ SagaTransaction UPDATE (COMPENSATING)
   → stock: 예수금 차감
   → SagaStepHistory INSERT (STOCK_CASH_WITHDRAW_COMPENSATION, COMPENSATED)
   → SagaTransaction UPDATE (COMPENSATED)
-  + OutboxEvent INSERT (saga.compensation.completed)
+  + OutboxEvent INSERT (saga.compensated)
   → 동일 트랜잭션 Commit
 ```
 
@@ -497,13 +498,13 @@ STEP 2 또는 STEP 3 실패 / timeout
 [실패] SagaTransaction UPDATE (COMPENSATING)
 [timeout] 상태 조회 후 미처리 확인 → COMPENSATING
 
-+ OutboxEvent INSERT (saga.compensation.started)
++ OutboxEvent INSERT (saga.compensated (보상 시작))
 
   ─── COMPENSATION: STOCK_CASH_DEPOSIT ────────────────────────────
   StockCoreClient.depositCash(fromStockAccountId, amount)
   Header: Idempotency-Key = "{sagaId}_COMPENSATION_DEPOSIT"
   → stock: 예수금 복구
-  → SagaTransaction UPDATE (COMPENSATED) + OutboxEvent (saga.compensation.completed)
+  → SagaTransaction UPDATE (COMPENSATED) + OutboxEvent (saga.compensated)
 ```
 
 ---
@@ -513,15 +514,16 @@ STEP 2 또는 STEP 3 실패 / timeout
 ## 7-1. transaction-server 발행 (Outbox 경유 — 보장됨)
 
 transaction-server가 온프레미스 금융 거래의 source-of-truth event stream을 제공한다.
+현재 단계에서는 Audit/Event Streaming 목적. 향후 Notification/Analytics 서비스 연계 시 활용.
 
 | 토픽 | 발행 시점 | 주요 payload |
 |------|-----------|-------------|
 | `saga.started` | Saga 시작 | sagaId, sagaType, amount |
 | `saga.completed` | 모든 단계 성공 | sagaId, steps 결과 |
 | `saga.failed` | 단계 실패, 보상 불필요 | sagaId, failedStep, reason |
-| `saga.compensation.started` | 보상 트랜잭션 시작 | sagaId, compensationTarget |
-| `saga.compensation.completed` | 보상 완료 | sagaId |
-| `saga.unknown` | approve timeout, 상태 불명 | sagaId, transferId |
+| `saga.compensated` | 보상 트랜잭션 완료 | sagaId, compensatedStep |
+
+> `saga.unknown` (approve timeout, 상태 불명) 은 운영 알림용으로 별도 처리. 필요 시 추가.
 
 ## 7-2. bank-server / stock-server
 
@@ -556,7 +558,7 @@ X-Trace-Id: {traceId}
 | POST | `/internal/v1/bank/transfers` | ✅ 완료 |
 | POST | `/internal/v1/bank/transfers/{id}/approve` | ✅ 완료 |
 | GET | `/internal/v1/bank/transfers/{id}` | ✅ 완료 |
-| POST | `/internal/v1/bank/transfers/{id}/cancel` | ⬜ 협의 중 (bank 담당자 결정) |
+| POST | `/internal/v1/bank/transfers/{id}/cancel` | ❌ 미구현 (구현 확정) |
 
 ## 9-2. stock-server (신규 구현)
 
