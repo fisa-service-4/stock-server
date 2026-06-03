@@ -133,7 +133,6 @@ public class StockPriceHistoryService {
     return StockPriceResponse.of(master, history, yesterdayClose);
   }
 
-  @Transactional
   public void initDailyCandles(String stockCode, BigDecimal basePrice) {
     LocalDate today = LocalDate.now();
     BigDecimal prevClose = basePrice;
@@ -142,6 +141,10 @@ public class StockPriceHistoryService {
       LocalDate date = today.minusDays(i);
       DayOfWeek dow = date.getDayOfWeek();
       if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+        continue;
+      }
+
+      if (stockPriceHistoryRepository.existsByStockCodeAndTradedDate(stockCode, date)) {
         continue;
       }
 
@@ -170,11 +173,6 @@ public class StockPriceHistoryService {
 
       prevClose = close;
 
-      LocalDateTime collectedAt = date.atTime(15, 30);
-      if (stockPriceHistoryRepository.existsByStockCodeAndCollectedAt(stockCode, collectedAt)) {
-        continue;
-      }
-
       stockPriceHistoryRepository.save(
           StockPriceHistory.builder()
               .stockCode(stockCode)
@@ -185,7 +183,7 @@ public class StockPriceHistoryService {
               .closePrice(close)
               .volume(volume)
               .fluctuationRate(fluctuationRate)
-              .collectedAt(collectedAt)
+              .collectedAt(date.atTime(15, 30))
               .build());
 
       log.info(
