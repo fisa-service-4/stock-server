@@ -16,6 +16,7 @@ public enum ErrorCode {
   // ACCOUNT
   ACCOUNT_001(HttpStatus.NOT_FOUND, "ACCOUNT_001", "계좌 없음"),
   ACCOUNT_002(HttpStatus.FORBIDDEN, "ACCOUNT_002", "계좌 접근 권한 없음"),
+  ACCOUNT_003(HttpStatus.BAD_REQUEST, "ACCOUNT_003", "사용할 수 없는 계좌입니다"),
 
   // STOCK
   STOCK_001(HttpStatus.NOT_FOUND, "STOCK_001", "종목 없음"),

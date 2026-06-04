@@ -136,7 +136,7 @@
   "success": true,
   "data": {
     "content": [
-      { "accountId": 2001, "accountNumber": "300-123-456789", "accountName": "내 주식 계좌", "bankCode": "039" }
+      { "accountId": 2001, "accountNumber": "300-123-456789", "accountName": "내 주식 계좌", "bankCode": "243" }
     ]
   },
   "meta": { "traceId": "uuid" }
@@ -155,6 +155,28 @@
   "meta": { "traceId": "uuid" }
 }
 ```
+
+---
+
+### STOCK-ACCOUNT-003. 계좌 유효성 검증
+**POST** `/internal/v1/stock/accounts/validate`
+> **온프레미스 내부 전용** — transaction-server → stock-server 직접 호출.
+
+**Request Body**
+```json
+{ "toBankCode": "243", "toAccountNumber": "300-777-000071" }
+```
+
+| `toBankCode` 값 | 증권사 |
+|---|---|
+| `243` | 한국투자증권 |
+| `247` | NH투자증권 |
+
+**Response `200`**
+```json
+{ "success": true, "data": { "validYn": true, "status": "ACTIVE" }, "meta": { "traceId": "uuid" } }
+```
+> `ACCOUNT_001` (계좌 없음) / `ACCOUNT_003` (LOCKED·CLOSED)
 
 ---
 

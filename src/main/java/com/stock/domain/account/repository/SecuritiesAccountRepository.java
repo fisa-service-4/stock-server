@@ -13,4 +13,7 @@ public interface SecuritiesAccountRepository extends JpaRepository<SecuritiesAcc
   Optional<SecuritiesAccount> findFirstByUserId(Long userId);
 
   List<SecuritiesAccount> findAllByAccountStatus(AccountStatus accountStatus);
+
+  Optional<SecuritiesAccount> findByBrokerCodeAndAccountNumber(
+      String brokerCode, String accountNumber);
 }

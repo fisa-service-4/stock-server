@@ -27,4 +27,4 @@ USING (SELECT '1234567890' AS account_number FROM DUAL) s
 ON (t.account_number = s.account_number)
 WHEN NOT MATCHED THEN
   INSERT (user_id, broker_code, account_number, account_name, cash_balance, withdrawable_balance, account_status, opened_at, created_at, updated_at)
-  VALUES (1, 'KIS', '1234567890', '테스트 계좌', 10000000, 10000000, 'ACTIVE', SYSDATE, SYSDATE, SYSDATE);
+  VALUES (1, '243', '1234567890', '테스트 계좌', 10000000, 10000000, 'ACTIVE', SYSDATE, SYSDATE, SYSDATE);

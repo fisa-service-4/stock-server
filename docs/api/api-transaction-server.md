@@ -544,7 +544,7 @@
         "accountId": 2001,
         "accountNumber": "300-123-456789",
         "accountName": "내 주식 계좌",
-        "bankCode": "039"
+        "bankCode": "243"
       }
     ]
   },

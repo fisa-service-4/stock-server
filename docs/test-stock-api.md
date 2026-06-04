@@ -17,6 +17,14 @@
 | 초기 예수금 | `10,000,000원` |
 | 계좌명 | `테스트 계좌` |
 | 계좌번호 | `1234567890` |
+| brokerCode | `243` (한국투자증권) |
+
+### 증권사 코드
+
+| 코드 | 증권사 |
+|---|---|
+| `243` | 한국투자증권 |
+| `247` | NH투자증권 |
 
 ### 시드 종목
 
@@ -177,7 +185,7 @@ curl http://localhost:8082/internal/v1/stock/accounts \
   "success": true,
   "data": {
     "content": [
-      { "accountId": 1, "accountNumber": "1234567890", "accountName": "테스트 계좌", "bankCode": "KIS" }
+      { "accountId": 1, "accountNumber": "1234567890", "accountName": "테스트 계좌", "bankCode": "243" }
     ]
   }
 }
@@ -203,9 +211,54 @@ curl http://localhost:8082/internal/v1/stock/accounts/1/cash-balance \
 
 ---
 
-## 7. 주문 생성
+## 7. 계좌 유효성 검증
 
-### 7-1. 매수 — 시장가 (MARKET)
+> **온프레미스 내부 전용 API.** transaction-server가 이체 Saga 진행 전 입금 대상 계좌를 검증할 때 호출합니다.  
+> `toBankCode`는 증권사 식별 코드입니다. `243` (한국투자증권) / `247` (NH투자증권) 두 값만 유효합니다.  
+> 시드 계좌의 brokerCode는 `243`입니다.
+
+### 7-1. 정상 계좌 검증
+
+```bash
+curl -X POST http://localhost:8082/internal/v1/stock/accounts/validate \
+  -H "Content-Type: application/json" \
+  -H "X-Trace-Id: test-001" \
+  -d '{
+    "toBankCode": "243",
+    "toAccountNumber": "1234567890"
+  }'
+```
+
+**응답 예시**
+```json
+{
+  "success": true,
+  "data": {
+    "validYn": true,
+    "status": "ACTIVE"
+  }
+}
+```
+
+### 7-2. 에러 케이스
+
+```bash
+# 존재하지 않는 계좌
+curl -X POST http://localhost:8082/internal/v1/stock/accounts/validate \
+  -H "Content-Type: application/json" \
+  -H "X-Trace-Id: test-001" \
+  -d '{ "toBankCode": "243", "toAccountNumber": "0000000000" }'
+```
+
+```json
+{ "success": false, "error": { "code": "ACCOUNT_001", "message": "계좌 없음" } }
+```
+
+---
+
+## 8. 주문 생성
+
+### 8-1. 매수 — 시장가 (MARKET)
 
 ```bash
 curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
@@ -220,7 +273,7 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
   }'
 ```
 
-### 7-2. 매수 — 지정가 (LIMIT)
+### 8-2. 매수 — 지정가 (LIMIT)
 
 > 현재가 이상으로 지정하면 즉시 체결됩니다. 현재가보다 낮게 지정하면 `REQUESTED` 상태로 대기합니다.
 
@@ -238,7 +291,7 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
   }'
 ```
 
-### 7-3. 매도 — 시장가
+### 8-3. 매도 — 시장가
 
 > 매수 체결 후 보유 수량이 있어야 성공합니다.
 
@@ -284,7 +337,7 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/1/orders \
 
 ---
 
-## 8. 주문 취소
+## 9. 주문 취소
 
 > `REQUESTED` 상태인 주문만 취소 가능합니다. 이미 체결(`FILLED`)된 주문은 취소 불가합니다.
 
@@ -297,7 +350,7 @@ curl -X POST http://localhost:8082/internal/v1/stock/orders/1/cancel \
 
 ---
 
-## 9. 주문 목록 조회
+## 10. 주문 목록 조회
 
 ```bash
 # 전체 목록
@@ -322,7 +375,7 @@ curl "http://localhost:8082/internal/v1/stock/accounts/1/orders?orderType=BUY&pa
 
 ---
 
-## 10. 주문 상세 조회
+## 11. 주문 상세 조회
 
 ```bash
 # orderId=1 상세 조회
@@ -354,7 +407,7 @@ curl http://localhost:8082/internal/v1/stock/orders/1 \
 
 ---
 
-## 11. 체결 내역 조회
+## 12. 체결 내역 조회
 
 ```bash
 # 전체 체결 내역
@@ -379,7 +432,7 @@ curl "http://localhost:8082/internal/v1/stock/accounts/1/executions?fromDate=202
 
 ---
 
-## 12. 보유종목 조회
+## 13. 보유종목 조회
 
 > 매수 체결 후 확인하세요. 보유종목이 없으면 빈 배열(`[]`)로 응답합니다.
 
@@ -412,7 +465,7 @@ curl http://localhost:8082/internal/v1/stock/accounts/1/holdings \
 
 ---
 
-## 13. 수익률 조회
+## 14. 수익률 조회
 
 > `dailyReturnRate`는 전날 스냅샷이 없으면 `null`로 반환됩니다.
 
@@ -441,18 +494,19 @@ curl http://localhost:8082/internal/v1/stock/accounts/1/returns \
 처음 테스트할 때는 아래 순서로 진행하면 전체 흐름을 확인할 수 있습니다.
 
 ```
-1. 헬스 체크          → 서버 연결 확인
-2. 종목 검색          → 삼성전자 검색
-3. 현재가 조회         → 005930 현재가 확인
-4. 예수금 조회         → 초기 10,000,000원 확인
-5. 주문 생성 (매수)    → 삼성전자 5주 시장가 매수
-6. 주문 상세 조회      → FILLED 상태 + 평균체결가 확인
-7. 체결 내역 조회      → 체결 기록 확인
-8. 예수금 재조회       → 매수금액만큼 감소 확인
-9. 보유종목 조회       → 삼성전자 5주 + 실시간 평가금액 확인
-10. 수익률 조회        → totalReturnRate 확인
-11. 주문 생성 (매도)   → 보유 수량 내에서 매도
-12. 보유종목 재조회    → 수량 감소 확인
+1.  헬스 체크              → 서버 연결 확인
+2.  종목 검색              → 삼성전자 검색
+3.  현재가 조회            → 005930 현재가 확인
+4.  예수금 조회            → 초기 10,000,000원 확인
+5.  계좌 유효성 검증       → 입금 대상 계좌 검증 (온프레미스 내부용)
+6.  주문 생성 (매수)       → 삼성전자 5주 시장가 매수
+7.  주문 상세 조회         → FILLED 상태 + 평균체결가 확인
+8.  체결 내역 조회         → 체결 기록 확인
+9.  예수금 재조회          → 매수금액만큼 감소 확인
+10. 보유종목 조회          → 삼성전자 5주 + 실시간 평가금액 확인
+11. 수익률 조회            → totalReturnRate 확인
+12. 주문 생성 (매도)       → 보유 수량 내에서 매도
+13. 보유종목 재조회        → 수량 감소 확인
 ```
 
 ---
