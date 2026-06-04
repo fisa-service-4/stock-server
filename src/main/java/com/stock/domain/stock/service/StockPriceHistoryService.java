@@ -133,9 +133,14 @@ public class StockPriceHistoryService {
     return StockPriceResponse.of(master, history, yesterdayClose);
   }
 
-  public void initDailyCandles(String stockCode, BigDecimal basePrice) {
+  public void initDailyCandles(String stockCode, BigDecimal fallbackPrice) {
+    BigDecimal prevClose =
+        stockPriceHistoryRepository
+            .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
+            .map(StockPriceHistory::getClosePrice)
+            .orElse(fallbackPrice);
+
     LocalDate today = LocalDate.now();
-    BigDecimal prevClose = basePrice;
 
     for (int i = 60; i >= 1; i--) {
       LocalDate date = today.minusDays(i);
