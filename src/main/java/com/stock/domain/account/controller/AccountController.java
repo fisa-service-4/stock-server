@@ -1,7 +1,9 @@
 package com.stock.domain.account.controller;
 
+import com.stock.domain.account.dto.request.AccountValidateRequest;
 import com.stock.domain.account.dto.request.CashRequest;
 import com.stock.domain.account.dto.response.AccountResponse;
+import com.stock.domain.account.dto.response.AccountValidateResponse;
 import com.stock.domain.account.dto.response.CashBalanceResponse;
 import com.stock.domain.account.dto.response.CashResponse;
 import com.stock.domain.account.service.AccountService;
@@ -53,6 +55,20 @@ public class AccountController {
       @PathVariable Long accountId) {
     log.info("[{}] [userId={}] 예수금 조회 요청 accountId={}", MDC.get("traceId"), userId, accountId);
     CashBalanceResponse result = accountService.getCashBalance(userId, accountId);
+    return ResponseEntity.ok(ApiResponse.success(result, traceId));
+  }
+
+  @Operation(summary = "계좌 유효성 검증", description = "기관 코드와 계좌번호로 계좌 존재 여부 및 사용 가능 상태를 검증합니다.")
+  @PostMapping("/accounts/validate")
+  public ResponseEntity<ApiResponse<AccountValidateResponse>> validateAccount(
+      @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
+      @RequestBody @Valid AccountValidateRequest request) {
+    log.info(
+        "[{}] 계좌 유효성 검증 요청 toBankCode={} toAccountNumber={}",
+        MDC.get("traceId"),
+        request.getToBankCode(),
+        request.getToAccountNumber());
+    AccountValidateResponse result = accountService.validateAccount(request);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 

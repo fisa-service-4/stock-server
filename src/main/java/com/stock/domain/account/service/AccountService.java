@@ -1,7 +1,11 @@
 package com.stock.domain.account.service;
 
+import com.stock.domain.account.dto.request.AccountValidateRequest;
 import com.stock.domain.account.dto.response.AccountResponse;
+import com.stock.domain.account.dto.response.AccountValidateResponse;
 import com.stock.domain.account.dto.response.CashBalanceResponse;
+import com.stock.domain.account.entity.SecuritiesAccount;
+import com.stock.domain.account.entity.enums.AccountStatus;
 import com.stock.domain.account.repository.SecuritiesAccountRepository;
 import com.stock.domain.account.validator.AccountValidator;
 import com.stock.global.exception.ErrorCode;
@@ -42,5 +46,38 @@ public class AccountService {
     var account = accountValidator.validateOwner(userId, accountId);
     log.info("[{}] 예수금 조회 완료 accountId={}", MDC.get("traceId"), accountId);
     return CashBalanceResponse.from(account);
+  }
+
+  @Transactional(readOnly = true)
+  public AccountValidateResponse validateAccount(AccountValidateRequest request) {
+    SecuritiesAccount account =
+        securitiesAccountRepository
+            .findByBrokerCodeAndAccountNumber(
+                request.getToBankCode(), request.getToAccountNumber())
+            .orElseThrow(() -> {
+              log.warn(
+                  "[{}] 계좌 없음 brokerCode={} accountNumber={}",
+                  MDC.get("traceId"),
+                  request.getToBankCode(),
+                  request.getToAccountNumber());
+              return new GlobalException(ErrorCode.ACCOUNT_001);
+            });
+
+    if (account.getAccountStatus() == AccountStatus.LOCKED
+        || account.getAccountStatus() == AccountStatus.CLOSED) {
+      log.warn(
+          "[{}] 사용 불가 계좌 accountNumber={} status={}",
+          MDC.get("traceId"),
+          request.getToAccountNumber(),
+          account.getAccountStatus());
+      throw new GlobalException(ErrorCode.ACCOUNT_003);
+    }
+
+    log.info(
+        "[{}] 계좌 유효성 검증 완료 accountNumber={} status={}",
+        MDC.get("traceId"),
+        request.getToAccountNumber(),
+        account.getAccountStatus());
+    return AccountValidateResponse.from(account);
   }
 }
