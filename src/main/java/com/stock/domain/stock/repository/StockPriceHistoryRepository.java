@@ -23,7 +23,7 @@ public interface StockPriceHistoryRepository extends JpaRepository<StockPriceHis
   List<StockPriceHistory> findByStockCodeAndTradedDateBetweenOrderByTradedDateAsc(
       String stockCode, LocalDate from, LocalDate to);
 
-  boolean existsByStockCodeAndCollectedAt(String stockCode, LocalDateTime collectedAt);
+  boolean existsByStockCodeAndTradedDate(String stockCode, LocalDate tradedDate);
 
   @Query(
       "SELECT h FROM StockPriceHistory h WHERE h.priceHistoryId IN ("

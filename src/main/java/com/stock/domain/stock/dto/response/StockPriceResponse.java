@@ -22,12 +22,13 @@ public class StockPriceResponse {
 
   public static StockPriceResponse of(
       StockMaster master, StockPriceHistory history, BigDecimal yesterdayClose) {
-    BigDecimal currentPrice = history.getClosePrice();
-    BigDecimal changeAmount = currentPrice.subtract(yesterdayClose);
+    BigDecimal currentPrice = history.getClosePrice().setScale(0, RoundingMode.HALF_UP);
+    BigDecimal prevClose = yesterdayClose.setScale(0, RoundingMode.HALF_UP);
+    BigDecimal changeAmount = currentPrice.subtract(prevClose);
     BigDecimal changeRate =
-        yesterdayClose.compareTo(BigDecimal.ZERO) != 0
+        prevClose.compareTo(BigDecimal.ZERO) != 0
             ? changeAmount
-                .divide(yesterdayClose, 4, RoundingMode.HALF_UP)
+                .divide(prevClose, 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"))
                 .setScale(2, RoundingMode.HALF_UP)
             : BigDecimal.ZERO;

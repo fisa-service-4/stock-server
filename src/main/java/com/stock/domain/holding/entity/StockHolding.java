@@ -70,7 +70,8 @@ public class StockHolding extends BaseEntity {
   }
 
   public void buy(int quantity, BigDecimal price) {
-    BigDecimal newAmount = price.multiply(BigDecimal.valueOf(quantity));
+    BigDecimal roundedPrice = price.setScale(0, java.math.RoundingMode.HALF_UP);
+    BigDecimal newAmount = roundedPrice.multiply(BigDecimal.valueOf(quantity));
     BigDecimal totalAmount =
         this.averagePurchasePrice.multiply(BigDecimal.valueOf(this.holdingQuantity)).add(newAmount);
     int newQuantity = this.holdingQuantity + quantity;

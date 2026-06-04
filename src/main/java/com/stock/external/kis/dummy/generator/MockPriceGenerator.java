@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class MockPriceGenerator {
 
   public BigDecimal generate(BigDecimal lastPrice) {
-    double variationRate = Math.random() * 0.06 - 0.03;
+    double variationRate = Math.random() * 0.01 - 0.005;
 
     BigDecimal multiplier = BigDecimal.ONE.add(BigDecimal.valueOf(variationRate));
 

@@ -19,7 +19,6 @@ import java.time.YearMonth;
 import java.time.temporal.IsoFields;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -40,6 +39,7 @@ public class StockPriceHistoryService {
 
   @Transactional
   public void recordTick(String stockCode, BigDecimal prevClose, BigDecimal newClose) {
+    prevClose = prevClose.setScale(0, RoundingMode.HALF_UP);
     BigDecimal high = newClose.max(prevClose);
     BigDecimal low = newClose.min(prevClose);
     BigDecimal fluctuationRate =
@@ -133,15 +133,24 @@ public class StockPriceHistoryService {
     return StockPriceResponse.of(master, history, yesterdayClose);
   }
 
-  @Transactional
-  public void initDailyCandles(String stockCode, BigDecimal basePrice) {
+  public void initDailyCandles(String stockCode, BigDecimal fallbackPrice) {
+    BigDecimal prevClose =
+        stockPriceHistoryRepository
+            .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
+            .map(StockPriceHistory::getClosePrice)
+            .orElse(fallbackPrice)
+            .setScale(0, RoundingMode.HALF_UP);
+
     LocalDate today = LocalDate.now();
-    BigDecimal prevClose = basePrice;
 
     for (int i = 60; i >= 1; i--) {
       LocalDate date = today.minusDays(i);
       DayOfWeek dow = date.getDayOfWeek();
       if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+        continue;
+      }
+
+      if (stockPriceHistoryRepository.existsByStockCodeAndTradedDate(stockCode, date)) {
         continue;
       }
 
@@ -170,11 +179,6 @@ public class StockPriceHistoryService {
 
       prevClose = close;
 
-      LocalDateTime collectedAt = date.atTime(15, 30);
-      if (stockPriceHistoryRepository.existsByStockCodeAndCollectedAt(stockCode, collectedAt)) {
-        continue;
-      }
-
       stockPriceHistoryRepository.save(
           StockPriceHistory.builder()
               .stockCode(stockCode)
@@ -185,7 +189,7 @@ public class StockPriceHistoryService {
               .closePrice(close)
               .volume(volume)
               .fluctuationRate(fluctuationRate)
-              .collectedAt(collectedAt)
+              .collectedAt(date.atTime(15, 30))
               .build());
 
       log.info(
@@ -239,13 +243,10 @@ public class StockPriceHistoryService {
     return histories.stream()
         .collect(
             Collectors.groupingBy(
-                StockPriceHistory::getTradedDate,
-                TreeMap::new,
-                Collectors.maxBy(Comparator.comparing(StockPriceHistory::getCollectedAt))))
+                StockPriceHistory::getTradedDate, TreeMap::new, Collectors.toList()))
         .values()
         .stream()
-        .flatMap(Optional::stream)
-        .map(CandleItem::from)
+        .map(group -> aggregateCandle(group, group.get(0).getTradedDate()))
         .toList();
   }
 
@@ -278,7 +279,7 @@ public class StockPriceHistoryService {
   }
 
   private CandleItem aggregateCandle(List<StockPriceHistory> group, LocalDate representativeDate) {
-    group.sort(Comparator.comparing(StockPriceHistory::getTradedDate));
+    group.sort(Comparator.comparing(StockPriceHistory::getCollectedAt));
     BigDecimal open = group.get(0).getOpenPrice();
     BigDecimal close = group.get(group.size() - 1).getClosePrice();
     BigDecimal high =
@@ -295,10 +296,10 @@ public class StockPriceHistoryService {
 
     return CandleItem.builder()
         .date(representativeDate)
-        .open(open)
-        .high(high)
-        .low(low)
-        .close(close)
+        .open(open.setScale(0, RoundingMode.HALF_UP).longValue())
+        .high(high.setScale(0, RoundingMode.HALF_UP).longValue())
+        .low(low.setScale(0, RoundingMode.HALF_UP).longValue())
+        .close(close.setScale(0, RoundingMode.HALF_UP).longValue())
         .volume(volume)
         .build();
   }
