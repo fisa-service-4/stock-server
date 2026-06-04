@@ -20,12 +20,13 @@ public class StockSearchResponse {
 
   public static StockSearchResponse of(
       StockMaster master, StockPriceHistory history, BigDecimal prevDayClose) {
-    BigDecimal currentPrice = history.getClosePrice();
+    BigDecimal currentPrice = history.getClosePrice().setScale(0, RoundingMode.HALF_UP);
+    BigDecimal prevClose = prevDayClose.setScale(0, RoundingMode.HALF_UP);
     BigDecimal changeRate =
-        prevDayClose.compareTo(BigDecimal.ZERO) != 0
+        prevClose.compareTo(BigDecimal.ZERO) != 0
             ? currentPrice
-                .subtract(prevDayClose)
-                .divide(prevDayClose, 4, RoundingMode.HALF_UP)
+                .subtract(prevClose)
+                .divide(prevClose, 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"))
                 .setScale(2, RoundingMode.HALF_UP)
             : BigDecimal.ZERO;

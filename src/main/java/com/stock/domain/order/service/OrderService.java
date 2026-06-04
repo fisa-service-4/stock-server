@@ -261,13 +261,15 @@ public class OrderService {
         holdingOpt.get().buy(order.getOrderQuantity(), executionPrice);
         stockHoldingRepository.save(holdingOpt.get());
       } else {
+        BigDecimal roundedPrice = executionPrice.setScale(0, java.math.RoundingMode.HALF_UP);
         StockHolding newHolding =
             StockHolding.builder()
                 .securitiesAccountId(account.getSecuritiesAccountId())
                 .stockCode(order.getStockCode())
                 .holdingQuantity(order.getOrderQuantity())
-                .averagePurchasePrice(executionPrice)
-                .totalPurchaseAmount(executionAmount)
+                .averagePurchasePrice(roundedPrice)
+                .totalPurchaseAmount(
+                    roundedPrice.multiply(BigDecimal.valueOf(order.getOrderQuantity())))
                 .build();
         stockHoldingRepository.save(newHolding);
       }
