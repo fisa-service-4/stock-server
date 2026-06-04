@@ -63,8 +63,7 @@ public class AccountService {
                   return new GlobalException(ErrorCode.ACCOUNT_001);
                 });
 
-    if (account.getAccountStatus() == AccountStatus.LOCKED
-        || account.getAccountStatus() == AccountStatus.CLOSED) {
+    if (account.getAccountStatus() != AccountStatus.ACTIVE) {
       log.warn(
           "[{}] 사용 불가 계좌 accountNumber={} status={}",
           MDC.get("traceId"),

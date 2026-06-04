@@ -247,7 +247,7 @@ curl -X POST http://localhost:8082/internal/v1/stock/accounts/validate \
 curl -X POST http://localhost:8082/internal/v1/stock/accounts/validate \
   -H "Content-Type: application/json" \
   -H "X-Trace-Id: test-001" \
-  -d '{ "toBankCode": "KIS", "toAccountNumber": "0000000000" }'
+  -d '{ "toBankCode": "243", "toAccountNumber": "0000000000" }'
 ```
 
 ```json
