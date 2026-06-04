@@ -14,6 +14,7 @@ public interface SecuritiesAccountRepository extends JpaRepository<SecuritiesAcc
 
   List<SecuritiesAccount> findAllByAccountStatus(AccountStatus accountStatus);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   Optional<SecuritiesAccount> findByAccountNumber(String accountNumber);
 
   Optional<SecuritiesAccount> findByBrokerCodeAndAccountNumber(
