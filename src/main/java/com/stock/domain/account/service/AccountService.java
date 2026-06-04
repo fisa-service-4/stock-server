@@ -52,16 +52,16 @@ public class AccountService {
   public AccountValidateResponse validateAccount(AccountValidateRequest request) {
     SecuritiesAccount account =
         securitiesAccountRepository
-            .findByBrokerCodeAndAccountNumber(
-                request.getToBankCode(), request.getToAccountNumber())
-            .orElseThrow(() -> {
-              log.warn(
-                  "[{}] 계좌 없음 brokerCode={} accountNumber={}",
-                  MDC.get("traceId"),
-                  request.getToBankCode(),
-                  request.getToAccountNumber());
-              return new GlobalException(ErrorCode.ACCOUNT_001);
-            });
+            .findByBrokerCodeAndAccountNumber(request.getToBankCode(), request.getToAccountNumber())
+            .orElseThrow(
+                () -> {
+                  log.warn(
+                      "[{}] 계좌 없음 brokerCode={} accountNumber={}",
+                      MDC.get("traceId"),
+                      request.getToBankCode(),
+                      request.getToAccountNumber());
+                  return new GlobalException(ErrorCode.ACCOUNT_001);
+                });
 
     if (account.getAccountStatus() == AccountStatus.LOCKED
         || account.getAccountStatus() == AccountStatus.CLOSED) {
