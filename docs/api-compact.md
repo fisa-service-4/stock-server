@@ -337,30 +337,31 @@
 
 ## Phase 5 추가 예정 API (Saga 연동용 인바운드)
 
-> transaction-server → stock-server 호출. 아직 api-stock-server.md 미반영.
+> transaction-server → stock-server 호출. accountId 없이 accountNumber 기반으로 조회.
 
 ### STOCK-CASH-001. 예수금 입금
-**POST** `/internal/v1/stock/cash/deposit`
+**POST** `/internal/v1/stock/accounts/cash/deposit`
 
 ```json
 // Request
-{ "accountId": 2001, "amount": 1000000 }
+{ "accountNumber": "1234567890", "amount": 1000000, "sagaId": 1001 }
 
 // Response 200
 { "success": true, "data": { "accountId": 2001, "cashBalance": 4000000 }, "meta": { "traceId": "uuid" } }
 ```
+> `ACCOUNT_001` (계좌 없음) / `ACCOUNT_002` (본인 계좌 아님)
 
 ### STOCK-CASH-002. 예수금 출금
-**POST** `/internal/v1/stock/cash/withdraw`
+**POST** `/internal/v1/stock/accounts/cash/withdraw`
 
 ```json
 // Request
-{ "accountId": 2001, "amount": 500000 }
+{ "accountNumber": "1234567890", "amount": 500000, "sagaId": 1001 }
 
 // Response 200
 { "success": true, "data": { "accountId": 2001, "cashBalance": 3500000 }, "meta": { "traceId": "uuid" } }
 ```
-> `TRANSFER_002` (잔액 부족)
+> `ACCOUNT_001` (계좌 없음) / `ACCOUNT_002` (본인 계좌 아님) / `TRANSFER_002` (잔액 부족)
 
 ---
 
