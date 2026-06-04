@@ -68,10 +68,7 @@ public class CashService {
 
     if (!account.getUserId().equals(userId)) {
       log.warn(
-          "[{}] 계좌 접근 권한 없음 userId={} accountNumber={}",
-          MDC.get("traceId"),
-          userId,
-          accountNumber);
+          "[{}] 계좌 접근 권한 없음 userId={} accountNumber={}", MDC.get("traceId"), userId, accountNumber);
       throw new GlobalException(ErrorCode.ACCOUNT_002);
     }
 
