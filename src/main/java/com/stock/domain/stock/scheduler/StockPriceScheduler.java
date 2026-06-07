@@ -41,7 +41,7 @@ public class StockPriceScheduler {
         stockPriceHistoryService.recordTick(stockCode, nextPrice);
         processed++;
 
-        if (i < stocks.size() - 1) {
+        if (callDelayMs > 0 && i < stocks.size() - 1) {
           Thread.sleep(callDelayMs);
         }
       } catch (InterruptedException e) {

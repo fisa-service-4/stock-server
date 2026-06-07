@@ -39,6 +39,10 @@ public class StockPriceHistoryService {
 
   @Transactional
   public void recordTick(String stockCode, BigDecimal newClose) {
+    if (newClose == null) {
+      log.warn("[StockPriceHistoryService] 전달된 현재가가 null입니다. stockCode={}", stockCode);
+      return;
+    }
     BigDecimal prevClose =
         stockPriceHistoryRepository
             .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
