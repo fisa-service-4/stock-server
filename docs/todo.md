@@ -167,28 +167,34 @@
 
 ---
 
-## 🔲 Phase 5 — 예수금 + Kafka 연동
+## ✅ Phase 5 — 예수금 Saga 연동
 
-- [ ] build.gradle: `spring-kafka` 의존성 추가
-- [ ] application.yaml: Kafka bootstrap-servers 설정
-- [ ] `POST /internal/v1/stock/accounts/{accountId}/cash/deposit` 동작 확인
-- [ ] `POST /internal/v1/stock/accounts/{accountId}/cash/withdraw` 동작 확인 (잔액 부족 검증 포함)
-- [ ] Kafka 이벤트 발행 확인 (kafka-ui):
-  - [ ] `stock.cash.deposit.completed`
-  - [ ] `stock.cash.deposit.failed`
-  - [ ] `stock.cash.withdraw.completed`
-  - [ ] `stock.cash.withdraw.failed`
-  - [ ] `stock.order.completed`
-  - [ ] `stock.order.failed`
-- [ ] 원자성 한계 문서화 (Phase 6 필요성 명시)
+- [x] `POST /internal/v1/stock/accounts/cash/deposit` 구현 완료 (CashService.deposit)
+- [x] `POST /internal/v1/stock/accounts/cash/withdraw` 구현 완료 (잔액 부족 → TRANSFER_002)
+
+> Kafka 이벤트 발행 / Outbox 패턴은 stock-server 범위 아님 — transaction-server에서 처리
 
 ---
 
-## 🔲 Phase 6 — Outbox / Event 안정화
+## 🔲 KIS OpenAPI 실시세 연동
 
-- [ ] `OutboxEvent` 엔티티 (OUTBOX_EVENT 테이블)
-- [ ] 예수금 변경 + `OutboxEvent` INSERT 동일 트랜잭션 처리
-- [ ] `OutboxRelayWorker`: `@Scheduled` 5초 주기 PENDING → PUBLISHED
-- [ ] Kafka 발행 실패 시 FAILED 상태 전환 확인
-- [ ] `retry_count < 3` 재시도 동작 확인
-- [ ] Kafka 장애 후 복구 시 자동 재발행 확인
+### ✅ Issue A — `refactor`: Provider 패턴 도입 (완료)
+
+- [x] `external/kis/provider/StockPriceProvider.java` 인터페이스 생성
+- [x] `MockStockPriceProvider` — `StockPriceProvider` 구현 추가 + `StockPriceHistoryRepository` 주입 + `getNextPrice()` 제거
+- [x] `StockPriceHistoryService.recordTick()` 시그니처 변경: `(stockCode, prevClose, newClose)` → `(stockCode, newClose)`
+- [x] `StockPriceScheduler` — `@ConditionalOnProperty(mock.enabled=true)` 유지, `StockPriceProvider` 인터페이스 주입, `call-delay-ms` 추가, for-loop 전환
+- [x] `DummyKisClient` 삭제 (사용처 없음, `KisClient` 인터페이스 및 `KisCurrentPriceResponse` / `KisMapper` 유지)
+- [ ] Mock 모드(`stock.mock.enabled=true`) 기동 후 5초 주기 시세 정상 동작 확인
+
+### ✅ Issue B — `feat`: KIS OpenAPI 실시세 연동 (완료)
+
+- [x] `global/config/RestTemplateConfig.java` — RestTemplate 빈 (connect=3s, read=10s)
+- [x] `external/kis/config/KisProperties.java` — `@ConfigurationProperties(prefix="kis")`
+- [x] `external/kis/dto/KisTokenRequest.java` / `KisTokenResponse.java`
+- [x] `external/kis/auth/KisTokenManager.java` — Lazy 토큰 캐시 (`@PostConstruct` 없음)
+- [x] `external/kis/client/RealKisClient.java` — KIS 현재가 API HTTP 호출
+- [x] `external/kis/provider/KisStockPriceProvider.java` — rt_cd 검증 포함
+- [x] `application.yaml` — `kis:` 블록 추가 (환경변수 바인딩)
+- [x] `application-onpremise.yaml` — `mock.enabled=false`, `kis:` 설정
+- [x] Real 모드 기동 후 실제 주가 응답 확인

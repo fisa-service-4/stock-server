@@ -28,5 +28,10 @@ server:
 
 stock:
   mock:
-    enabled: true
-    tick-interval: 5000
+    enabled: false
+
+kis:
+  app-key: ${KIS_APP_KEY}
+  app-secret: ${KIS_APP_SECRET}
+  base-url: ${KIS_BASE_URL:https://openapivts.koreainvestment.com:29443}
+  call-delay-ms: 100
