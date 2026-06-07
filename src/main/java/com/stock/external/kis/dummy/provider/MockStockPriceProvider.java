@@ -1,6 +1,9 @@
 package com.stock.external.kis.dummy.provider;
 
+import com.stock.domain.stock.entity.StockPriceHistory;
+import com.stock.domain.stock.repository.StockPriceHistoryRepository;
 import com.stock.external.kis.dummy.generator.MockPriceGenerator;
+import com.stock.external.kis.provider.StockPriceProvider;
 import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(prefix = "stock.mock", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
-public class MockStockPriceProvider {
+public class MockStockPriceProvider implements StockPriceProvider {
 
   private static final Map<String, BigDecimal> FALLBACK_PRICES =
       Map.of(
@@ -22,14 +25,18 @@ public class MockStockPriceProvider {
           "035720", new BigDecimal("42950"));
 
   private final MockPriceGenerator mockPriceGenerator;
+  private final StockPriceHistoryRepository stockPriceHistoryRepository;
 
-  public BigDecimal getNextPrice(String stockCode, BigDecimal lastPrice) {
-    BigDecimal base =
-        lastPrice != null
-            ? lastPrice
-            : FALLBACK_PRICES.getOrDefault(stockCode, new BigDecimal("50000"));
-    BigDecimal next = mockPriceGenerator.generate(base);
-    log.debug("[MockStockPriceProvider] 시세 생성 stockCode={} base={} next={}", stockCode, base, next);
+  @Override
+  public BigDecimal getCurrentPrice(String stockCode) {
+    BigDecimal prevClose =
+        stockPriceHistoryRepository
+            .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
+            .map(StockPriceHistory::getClosePrice)
+            .orElse(getFallbackPrice(stockCode));
+    BigDecimal next = mockPriceGenerator.generate(prevClose);
+    log.debug(
+        "[MockStockPriceProvider] 시세 생성 stockCode={} prev={} next={}", stockCode, prevClose, next);
     return next;
   }
 

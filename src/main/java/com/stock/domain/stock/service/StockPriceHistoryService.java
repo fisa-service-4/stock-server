@@ -38,8 +38,13 @@ public class StockPriceHistoryService {
   private final MockPriceGenerator mockPriceGenerator;
 
   @Transactional
-  public void recordTick(String stockCode, BigDecimal prevClose, BigDecimal newClose) {
-    prevClose = prevClose.setScale(0, RoundingMode.HALF_UP);
+  public void recordTick(String stockCode, BigDecimal newClose) {
+    BigDecimal prevClose =
+        stockPriceHistoryRepository
+            .findTopByStockCodeOrderByCollectedAtDesc(stockCode)
+            .map(StockPriceHistory::getClosePrice)
+            .orElse(newClose)
+            .setScale(0, RoundingMode.HALF_UP);
     BigDecimal high = newClose.max(prevClose);
     BigDecimal low = newClose.min(prevClose);
     BigDecimal fluctuationRate =
