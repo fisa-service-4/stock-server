@@ -24,11 +24,11 @@ public class KisStockPriceProvider implements StockPriceProvider {
   public BigDecimal getCurrentPrice(String stockCode) {
     KisCurrentPriceResponse response = kisClient.getCurrentPrice(stockCode);
 
-    if (response == null || !"0".equals(response.getRtCd())) {
+    if (response == null || response.getOutput() == null || !"0".equals(response.getRtCd())) {
       String msgCd = response != null ? response.getMsgCd() : "null";
       String msg = response != null ? response.getMsg1() : "null";
       log.warn(
-          "[KisStockPriceProvider] rt_cd 오류 stockCode={} msgCd={} msg={}", stockCode, msgCd, msg);
+          "[KisStockPriceProvider] rt_cd 오류 또는 응답 바디 누락 stockCode={} msgCd={} msg={}", stockCode, msgCd, msg);
       throw new GlobalException(ErrorCode.STOCK_002);
     }
 
