@@ -2,6 +2,7 @@ package com.stock.domain.execution.repository;
 
 import com.stock.domain.execution.entity.StockExecution;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
