@@ -19,7 +19,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Profile("seed")
@@ -36,7 +35,6 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
   private final KisProperties kisProperties;
 
   @Override
-  @Transactional
   public void run(ApplicationArguments args) throws Exception {
     List<String> stockCodes =
         stockMasterRepository.findAll().stream().map(s -> s.getStockCode()).toList();
@@ -78,13 +76,15 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
     KisDailyChartResponse response = kisClient.getDailyChart(stockCode, fromDate, toDate);
 
     if (response == null || !"0".equals(response.getRtCd())) {
-      String code = response != null ? response.getRtCd() : "null";
+      String rtCd = response != null ? response.getRtCd() : "null";
+      String msgCd = response != null ? response.getMsgCd() : "null";
+      String msg1 = response != null ? response.getMsg1() : "null";
       log.warn(
           "[SeedRunner] KIS 응답 오류 stockCode={} rt_cd={} msg_cd={} msg1={}",
           stockCode,
-          response.getRtCd(),
-          response.getMsgCd(),
-          response.getMsg1());
+          rtCd,
+          msgCd,
+          msg1);
       return 0;
     }
 
