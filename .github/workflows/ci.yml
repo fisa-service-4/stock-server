@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - feat/#61-kis-daily-seed-runner
 
 permissions:
   contents: read
