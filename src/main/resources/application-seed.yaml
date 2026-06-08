@@ -1,0 +1,6 @@
+stock:
+  mock:
+    enabled: false
+
+kis:
+  call-delay-ms: 1000

@@ -1,26 +1,53 @@
-MERGE INTO stock_master t
-USING (SELECT '005930' AS stock_code, '삼성전자' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s
-ON (t.stock_code = s.stock_code)
-WHEN NOT MATCHED THEN
-  INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
-
-MERGE INTO stock_master t
-USING (SELECT '000660' AS stock_code, 'SK하이닉스' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s
-ON (t.stock_code = s.stock_code)
-WHEN NOT MATCHED THEN
-  INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
-
-MERGE INTO stock_master t
-USING (SELECT '035420' AS stock_code, 'NAVER' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s
-ON (t.stock_code = s.stock_code)
-WHEN NOT MATCHED THEN
-  INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
-
-MERGE INTO stock_master t
-USING (SELECT '035720' AS stock_code, '카카오' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s
-ON (t.stock_code = s.stock_code)
-WHEN NOT MATCHED THEN
-  INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '005930' AS stock_code, '삼성전자' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '000660' AS stock_code, 'SK하이닉스' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '373220' AS stock_code, 'LG에너지솔루션' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '207940' AS stock_code, '삼성바이오로직스' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '005380' AS stock_code, '현대차' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '000270' AS stock_code, '기아' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '035420' AS stock_code, 'NAVER' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '068270' AS stock_code, '셀트리온' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '006400' AS stock_code, '삼성SDI' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '066570' AS stock_code, 'LG전자' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '051910' AS stock_code, 'LG화학' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '096770' AS stock_code, 'SK이노베이션' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '005490' AS stock_code, 'POSCO홀딩스' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '003670' AS stock_code, '포스코퓨처엠' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '010130' AS stock_code, '고려아연' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '012330' AS stock_code, '현대모비스' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '028260' AS stock_code, '삼성물산' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '009150' AS stock_code, '삼성전기' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '018260' AS stock_code, '삼성SDS' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '015760' AS stock_code, '한국전력' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '010950' AS stock_code, 'S-Oil' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '033780' AS stock_code, 'KT&G' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '030200' AS stock_code, 'KT' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '017670' AS stock_code, 'SK텔레콤' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '011200' AS stock_code, 'HMM' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '003490' AS stock_code, '대한항공' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '097950' AS stock_code, 'CJ제일제당' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '000120' AS stock_code, 'CJ대한통운' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '271560' AS stock_code, '오리온' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '090430' AS stock_code, '아모레퍼시픽' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '000100' AS stock_code, '유한양행' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '161390' AS stock_code, '한국타이어앤테크놀로지' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '329180' AS stock_code, 'HD현대중공업' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '009540' AS stock_code, 'HD한국조선해양' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '267250' AS stock_code, 'HD현대' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '251270' AS stock_code, '넷마블' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '259960' AS stock_code, '크래프톤' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '036570' AS stock_code, '엔씨소프트' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '105560' AS stock_code, 'KB금융' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '055550' AS stock_code, '신한지주' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '086790' AS stock_code, '하나금융지주' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '316140' AS stock_code, '우리금융지주' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '032830' AS stock_code, '삼성생명' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '000810' AS stock_code, '삼성화재' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '005830' AS stock_code, 'DB손해보험' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '006800' AS stock_code, '미래에셋증권' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '071050' AS stock_code, '한국금융지주' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '039490' AS stock_code, '키움증권' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '138040' AS stock_code, '메리츠금융지주' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
+MERGE INTO stock_master t USING (SELECT '323410' AS stock_code, '카카오뱅크' AS stock_name, 'KOSPI' AS market_type FROM DUAL) s ON (t.stock_code = s.stock_code) WHEN NOT MATCHED THEN INSERT (stock_code, stock_name, market_type) VALUES (s.stock_code, s.stock_name, s.market_type);
 
 MERGE INTO securities_account t
 USING (SELECT '1234567890' AS account_number FROM DUAL) s
