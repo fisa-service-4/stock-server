@@ -8,6 +8,7 @@ import com.stock.domain.stock.entity.StockPriceHistory;
 import com.stock.domain.stock.repository.StockMasterRepository;
 import com.stock.domain.stock.repository.StockPriceHistoryRepository;
 import com.stock.external.kis.dummy.generator.MockPriceGenerator;
+import com.stock.external.kis.provider.StockPriceProvider;
 import com.stock.global.exception.ErrorCode;
 import com.stock.global.exception.GlobalException;
 import java.math.BigDecimal;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +39,12 @@ public class StockPriceHistoryService {
   private final StockPriceHistoryRepository stockPriceHistoryRepository;
   private final StockMasterRepository stockMasterRepository;
   private final MockPriceGenerator mockPriceGenerator;
+
+  @Value("${stock.mock.enabled:true}")
+  private boolean mockEnabled;
+
+  @Autowired(required = false)
+  private StockPriceProvider stockPriceProvider;
 
   @Transactional
   public void recordTick(String stockCode, BigDecimal newClose) {
@@ -106,7 +115,6 @@ public class StockPriceHistoryService {
     log.info("[StockPriceHistoryService] 초기 시세 저장 stockCode={} price={}", stockCode, initialPrice);
   }
 
-  @Transactional(readOnly = true)
   public StockPriceResponse getCurrentPrice(String stockCode) {
     StockMaster master =
         stockMasterRepository
@@ -116,6 +124,20 @@ public class StockPriceHistoryService {
                   log.warn("[{}] 종목 없음 stockCode={}", MDC.get("traceId"), stockCode);
                   return new GlobalException(ErrorCode.STOCK_001);
                 });
+
+    // KIS 모드: GET /price 요청 시 실시간 조회 후 tick 저장
+    if (!mockEnabled && stockPriceProvider != null) {
+      try {
+        BigDecimal realTimePrice = stockPriceProvider.getCurrentPrice(stockCode);
+        recordTick(stockCode, realTimePrice);
+      } catch (Exception e) {
+        log.warn(
+            "[{}] KIS 실시간 조회 실패, DB fallback 사용 stockCode={} error={}",
+            MDC.get("traceId"),
+            stockCode,
+            e.getMessage());
+      }
+    }
 
     StockPriceHistory history =
         stockPriceHistoryRepository
