@@ -28,7 +28,10 @@ public class KisStockPriceProvider implements StockPriceProvider {
       String msgCd = response != null ? response.getMsgCd() : "null";
       String msg = response != null ? response.getMsg1() : "null";
       log.warn(
-          "[KisStockPriceProvider] rt_cd 오류 또는 응답 바디 누락 stockCode={} msgCd={} msg={}", stockCode, msgCd, msg);
+          "[KisStockPriceProvider] rt_cd 오류 또는 응답 바디 누락 stockCode={} msgCd={} msg={}",
+          stockCode,
+          msgCd,
+          msg);
       throw new GlobalException(ErrorCode.STOCK_002);
     }
 

@@ -35,7 +35,10 @@ public class OrderListItemResponse {
         .quantity(order.getOrderQuantity())
         .filledQuantity(order.getFilledQuantity())
         .remainingQuantity(order.getRemainingQuantity())
-        .price(order.getOrderPrice())
+        .price(
+            order.getOrderPrice() != null
+                ? order.getOrderPrice()
+                : order.getAverageExecutionPrice())
         .status(order.getOrderStatus())
         .orderedAt(order.getOrderedAt())
         .build();
