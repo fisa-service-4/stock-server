@@ -1,0 +1,32 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: stock-server
+
+  datasource:
+    url: jdbc:oracle:thin:@oracle:1521/XEPDB1
+    username: STOCK
+    password: stock123
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
+stock:
+  mock:
+    enabled: true
+    tick-interval: 5000
