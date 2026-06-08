@@ -12,6 +12,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,10 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
     int failCount = 0;
 
     for (String stockCode : stockCodes) {
+      if (Thread.currentThread().isInterrupted()) {
+        log.warn("[SeedRunner] 인터럽트 감지 — 시드 중단 (processed={}/{})", successCount + skipCount + failCount, stockCodes.size());
+        break;
+      }
       try {
         int saved = seedStock(stockCode, fromDate, toDate);
         if (saved == 0) {
@@ -94,7 +99,7 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
       return 0;
     }
 
-    int savedCount = 0;
+    List<StockPriceHistory> toSave = new ArrayList<>();
     for (DailyItem item : items) {
       LocalDate tradedDate = LocalDate.parse(item.getStckBsopDate(), KIS_DATE);
 
@@ -102,7 +107,7 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
         continue;
       }
 
-      StockPriceHistory history =
+      toSave.add(
           StockPriceHistory.builder()
               .stockCode(stockCode)
               .tradedDate(tradedDate)
@@ -113,13 +118,13 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
               .volume(parseLongSafe(item.getAcmlVol()))
               .fluctuationRate(parseSafe(item.getPrdyCtrt()))
               .collectedAt(tradedDate.atTime(LocalTime.of(15, 30)))
-              .build();
-
-      stockPriceHistoryRepository.save(history);
-      savedCount++;
+              .build());
     }
 
-    return savedCount;
+    if (!toSave.isEmpty()) {
+      stockPriceHistoryRepository.saveAll(toSave);
+    }
+    return toSave.size();
   }
 
   private LocalDate getLastBusinessDay() {
