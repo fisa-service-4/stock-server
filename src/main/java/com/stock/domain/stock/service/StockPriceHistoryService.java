@@ -115,7 +115,6 @@ public class StockPriceHistoryService {
     log.info("[StockPriceHistoryService] 초기 시세 저장 stockCode={} price={}", stockCode, initialPrice);
   }
 
-  @Transactional
   public StockPriceResponse getCurrentPrice(String stockCode) {
     StockMaster master =
         stockMasterRepository
