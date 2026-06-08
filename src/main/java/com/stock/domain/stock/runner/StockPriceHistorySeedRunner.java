@@ -123,7 +123,7 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
   }
 
   private LocalDate getLastBusinessDay() {
-    LocalDate date = LocalDate.now().minusDays(1);
+    LocalDate date = LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).minusDays(1);
     while (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
       date = date.minusDays(1);
     }
