@@ -1,7 +1,9 @@
 package com.stock.domain.account.controller;
 
+import com.stock.domain.account.dto.request.AccountValidateRequest;
 import com.stock.domain.account.dto.request.CashRequest;
 import com.stock.domain.account.dto.response.AccountResponse;
+import com.stock.domain.account.dto.response.AccountValidateResponse;
 import com.stock.domain.account.dto.response.CashBalanceResponse;
 import com.stock.domain.account.dto.response.CashResponse;
 import com.stock.domain.account.service.AccountService;
@@ -56,39 +58,51 @@ public class AccountController {
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 
+  @Operation(summary = "계좌 유효성 검증", description = "기관 코드와 계좌번호로 계좌 존재 여부 및 사용 가능 상태를 검증합니다.")
+  @PostMapping("/accounts/validate")
+  public ResponseEntity<ApiResponse<AccountValidateResponse>> validateAccount(
+      @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
+      @RequestBody @Valid AccountValidateRequest request) {
+    log.info(
+        "[{}] 계좌 유효성 검증 요청 toBankCode={} toAccountNumber={}",
+        MDC.get("traceId"),
+        request.getToBankCode(),
+        request.getToAccountNumber());
+    AccountValidateResponse result = accountService.validateAccount(request);
+    return ResponseEntity.ok(ApiResponse.success(result, traceId));
+  }
+
   @Operation(summary = "예수금 입금 (Saga)", description = "transaction-server Saga step — 예수금 증가 처리.")
-  @PostMapping("/accounts/{accountId}/cash/deposit")
+  @PostMapping("/accounts/cash/deposit")
   public ResponseEntity<ApiResponse<CashResponse>> deposit(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
-      @PathVariable Long accountId,
       @RequestBody @Valid CashRequest request) {
     log.info(
-        "[{}] [userId={}] 예수금 입금 요청 accountId={} amount={}",
+        "[{}] [userId={}] 예수금 입금 요청 accountNumber={} amount={}",
         MDC.get("traceId"),
         userId,
-        accountId,
+        request.getAccountNumber(),
         request.getAmount());
-    CashResponse result = cashService.deposit(userId, accountId, request);
+    CashResponse result = cashService.deposit(userId, request);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 
   @Operation(
       summary = "예수금 출금 (Saga compensation)",
       description = "transaction-server Saga rollback — 예수금 차감 처리.")
-  @PostMapping("/accounts/{accountId}/cash/withdraw")
+  @PostMapping("/accounts/cash/withdraw")
   public ResponseEntity<ApiResponse<CashResponse>> withdraw(
       @RequestHeader(value = HeaderConstants.USER_ID, required = false) Long userId,
       @RequestHeader(value = HeaderConstants.TRACE_ID, required = false) String traceId,
-      @PathVariable Long accountId,
       @RequestBody @Valid CashRequest request) {
     log.info(
-        "[{}] [userId={}] 예수금 출금 요청 accountId={} amount={}",
+        "[{}] [userId={}] 예수금 출금 요청 accountNumber={} amount={}",
         MDC.get("traceId"),
         userId,
-        accountId,
+        request.getAccountNumber(),
         request.getAmount());
-    CashResponse result = cashService.withdraw(userId, accountId, request);
+    CashResponse result = cashService.withdraw(userId, request);
     return ResponseEntity.ok(ApiResponse.success(result, traceId));
   }
 }

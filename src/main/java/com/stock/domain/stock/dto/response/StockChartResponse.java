@@ -1,7 +1,7 @@
 package com.stock.domain.stock.dto.response;
 
 import com.stock.domain.stock.entity.StockPriceHistory;
-import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.Builder;
@@ -18,19 +18,19 @@ public class StockChartResponse {
   public static class CandleItem {
 
     private LocalDate date;
-    private BigDecimal open;
-    private BigDecimal high;
-    private BigDecimal low;
-    private BigDecimal close;
+    private Long open;
+    private Long high;
+    private Long low;
+    private Long close;
     private Long volume;
 
     public static CandleItem from(StockPriceHistory history) {
       return CandleItem.builder()
           .date(history.getTradedDate())
-          .open(history.getOpenPrice())
-          .high(history.getHighPrice())
-          .low(history.getLowPrice())
-          .close(history.getClosePrice())
+          .open(history.getOpenPrice().setScale(0, RoundingMode.HALF_UP).longValue())
+          .high(history.getHighPrice().setScale(0, RoundingMode.HALF_UP).longValue())
+          .low(history.getLowPrice().setScale(0, RoundingMode.HALF_UP).longValue())
+          .close(history.getClosePrice().setScale(0, RoundingMode.HALF_UP).longValue())
           .volume(history.getVolume())
           .build();
     }
