@@ -65,7 +65,8 @@ class AccountValidatorTest {
 
     assertThatThrownBy(() -> accountValidator.validateOwner(USER_ID, ACCOUNT_ID))
         .isInstanceOf(GlobalException.class)
-        .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_001));
+        .satisfies(
+            e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_001));
   }
 
   @Test
@@ -77,6 +78,7 @@ class AccountValidatorTest {
     Long otherUserId = 999L;
     assertThatThrownBy(() -> accountValidator.validateOwner(otherUserId, ACCOUNT_ID))
         .isInstanceOf(GlobalException.class)
-        .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_002));
+        .satisfies(
+            e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_002));
   }
 }

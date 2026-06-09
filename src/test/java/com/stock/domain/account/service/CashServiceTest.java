@@ -71,7 +71,8 @@ class CashServiceTest {
       when(securitiesAccountRepository.findByAccountNumber(ACCOUNT_NUMBER))
           .thenReturn(Optional.of(acc));
 
-      CashResponse response = cashService.deposit(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000")));
+      CashResponse response =
+          cashService.deposit(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000")));
 
       assertThat(response.getCashBalance()).isEqualByComparingTo(new BigDecimal("1500000"));
       assertThat(acc.getCashBalance()).isEqualByComparingTo(new BigDecimal("1500000"));
@@ -84,9 +85,14 @@ class CashServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(
-              () -> cashService.deposit(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000"))))
+              () ->
+                  cashService.deposit(
+                      USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000"))))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_001));
+          .satisfies(
+              e ->
+                  assertThat(((GlobalException) e).getErrorCode())
+                      .isEqualTo(ErrorCode.ACCOUNT_001));
     }
 
     @Test
@@ -98,9 +104,14 @@ class CashServiceTest {
 
       Long otherUserId = 999L;
       assertThatThrownBy(
-              () -> cashService.deposit(otherUserId, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000"))))
+              () ->
+                  cashService.deposit(
+                      otherUserId, cashRequest(ACCOUNT_NUMBER, new BigDecimal("500000"))))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_002));
+          .satisfies(
+              e ->
+                  assertThat(((GlobalException) e).getErrorCode())
+                      .isEqualTo(ErrorCode.ACCOUNT_002));
     }
   }
 
@@ -119,7 +130,8 @@ class CashServiceTest {
       when(securitiesAccountRepository.findByAccountNumber(ACCOUNT_NUMBER))
           .thenReturn(Optional.of(acc));
 
-      CashResponse response = cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("300000")));
+      CashResponse response =
+          cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("300000")));
 
       assertThat(response.getCashBalance()).isEqualByComparingTo(new BigDecimal("700000"));
     }
@@ -131,7 +143,8 @@ class CashServiceTest {
       when(securitiesAccountRepository.findByAccountNumber(ACCOUNT_NUMBER))
           .thenReturn(Optional.of(acc));
 
-      CashResponse response = cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("1000000")));
+      CashResponse response =
+          cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("1000000")));
 
       assertThat(response.getCashBalance()).isEqualByComparingTo(BigDecimal.ZERO);
     }
@@ -144,9 +157,14 @@ class CashServiceTest {
           .thenReturn(Optional.of(acc));
 
       assertThatThrownBy(
-              () -> cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("1000000"))))
+              () ->
+                  cashService.withdraw(
+                      USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("1000000"))))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.TRANSFER_002));
+          .satisfies(
+              e ->
+                  assertThat(((GlobalException) e).getErrorCode())
+                      .isEqualTo(ErrorCode.TRANSFER_002));
     }
 
     @Test
@@ -156,9 +174,14 @@ class CashServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(
-              () -> cashService.withdraw(USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("300000"))))
+              () ->
+                  cashService.withdraw(
+                      USER_ID, cashRequest(ACCOUNT_NUMBER, new BigDecimal("300000"))))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ACCOUNT_001));
+          .satisfies(
+              e ->
+                  assertThat(((GlobalException) e).getErrorCode())
+                      .isEqualTo(ErrorCode.ACCOUNT_001));
     }
   }
 }

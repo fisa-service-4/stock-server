@@ -53,8 +53,10 @@ class StockHoldingTest {
 
       holding.buy(20, new BigDecimal("20000"));
 
-      BigDecimal expected = holding.getAveragePurchasePrice()
-          .multiply(BigDecimal.valueOf(holding.getHoldingQuantity()));
+      BigDecimal expected =
+          holding
+              .getAveragePurchasePrice()
+              .multiply(BigDecimal.valueOf(holding.getHoldingQuantity()));
       assertThat(holding.getTotalPurchaseAmount()).isEqualByComparingTo(expected);
     }
 

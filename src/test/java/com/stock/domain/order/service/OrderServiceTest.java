@@ -92,11 +92,19 @@ class OrderServiceTest {
   }
 
   private StockMaster stockMaster() {
-    return StockMaster.builder().stockCode(STOCK_CODE).stockName("삼성전자").marketType(MarketType.KOSPI).build();
+    return StockMaster.builder()
+        .stockCode(STOCK_CODE)
+        .stockName("삼성전자")
+        .marketType(MarketType.KOSPI)
+        .build();
   }
 
   private StockPriceResponse priceResponse(BigDecimal price) {
-    return StockPriceResponse.builder().stockCode(STOCK_CODE).stockName("삼성전자").currentPrice(price).build();
+    return StockPriceResponse.builder()
+        .stockCode(STOCK_CODE)
+        .stockName("삼성전자")
+        .currentPrice(price)
+        .build();
   }
 
   private OrderCreateRequest buyRequest(OrderMethod method, int quantity, BigDecimal limitPrice) {
@@ -132,11 +140,15 @@ class OrderServiceTest {
   private void mockBaseSetup(SecuritiesAccount acc, BigDecimal currentPrice) {
     when(accountValidator.validateOwner(USER_ID, ACCOUNT_ID)).thenReturn(acc);
     when(stockMasterRepository.findById(STOCK_CODE)).thenReturn(Optional.of(stockMaster()));
-    when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE)).thenReturn(priceResponse(currentPrice));
+    when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE))
+        .thenReturn(priceResponse(currentPrice));
     when(stockOrderRepository.save(any(StockOrder.class))).thenAnswer(inv -> inv.getArgument(0));
-    when(stockExecutionRepository.save(any(StockExecution.class))).thenAnswer(inv -> inv.getArgument(0));
-    when(stockHoldingRepository.save(any(StockHolding.class))).thenAnswer(inv -> inv.getArgument(0));
-    when(securitiesAccountRepository.save(any(SecuritiesAccount.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(stockExecutionRepository.save(any(StockExecution.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(stockHoldingRepository.save(any(StockHolding.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(securitiesAccountRepository.save(any(SecuritiesAccount.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
   }
 
   // ──────────────────────────────────────────────
@@ -152,7 +164,8 @@ class OrderServiceTest {
     void market_alwaysExecutes() {
       SecuritiesAccount acc = account(new BigDecimal("1000000"));
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
       OrderCreateResponse response =
@@ -167,11 +180,13 @@ class OrderServiceTest {
     void limitBuy_executes_whenCurrentPriceLe() {
       SecuritiesAccount acc = account(new BigDecimal("1000000"));
       mockBaseSetup(acc, new BigDecimal("63000"));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
       OrderCreateResponse response =
-          orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
+          orderService.createOrder(
+              USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
 
       assertThat(response.getStatus()).isEqualTo(OrderStatus.FILLED);
       verify(stockExecutionRepository).save(any(StockExecution.class));
@@ -184,7 +199,8 @@ class OrderServiceTest {
       mockBaseSetup(acc, new BigDecimal("70000"));
 
       OrderCreateResponse response =
-          orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
+          orderService.createOrder(
+              USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
 
       assertThat(response.getStatus()).isEqualTo(OrderStatus.REQUESTED);
       assertThat(response.getFilledQuantity()).isEqualTo(0);
@@ -196,11 +212,13 @@ class OrderServiceTest {
     void limitSell_executes_whenCurrentPriceGe() {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       mockBaseSetup(acc, new BigDecimal("72000"));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(holding(20, new BigDecimal("60000"))));
 
       OrderCreateResponse response =
-          orderService.createOrder(USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.LIMIT, 10, new BigDecimal("70000")));
+          orderService.createOrder(
+              USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.LIMIT, 10, new BigDecimal("70000")));
 
       assertThat(response.getStatus()).isEqualTo(OrderStatus.FILLED);
       verify(stockExecutionRepository).save(any(StockExecution.class));
@@ -211,11 +229,13 @@ class OrderServiceTest {
     void limitSell_staysRequested_whenCurrentPriceBelow() {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       mockBaseSetup(acc, new BigDecimal("68000"));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(holding(20, new BigDecimal("60000"))));
 
       OrderCreateResponse response =
-          orderService.createOrder(USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.LIMIT, 10, new BigDecimal("70000")));
+          orderService.createOrder(
+              USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.LIMIT, 10, new BigDecimal("70000")));
 
       assertThat(response.getStatus()).isEqualTo(OrderStatus.REQUESTED);
       verify(stockExecutionRepository, never()).save(any());
@@ -235,10 +255,14 @@ class OrderServiceTest {
     void buy_passes_whenSufficientBalance() {
       SecuritiesAccount acc = account(new BigDecimal("1000000"));
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
-      assertThat(orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null)).getStatus())
+      assertThat(
+              orderService
+                  .createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null))
+                  .getStatus())
           .isEqualTo(OrderStatus.FILLED);
     }
 
@@ -247,10 +271,14 @@ class OrderServiceTest {
     void buy_passes_atExactBalance() {
       SecuritiesAccount acc = account(new BigDecimal("700000")); // 70,000 * 10
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
-      assertThat(orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null)).getStatus())
+      assertThat(
+              orderService
+                  .createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null))
+                  .getStatus())
           .isEqualTo(OrderStatus.FILLED);
     }
 
@@ -260,12 +288,16 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("100000"));
       when(accountValidator.validateOwner(USER_ID, ACCOUNT_ID)).thenReturn(acc);
       when(stockMasterRepository.findById(STOCK_CODE)).thenReturn(Optional.of(stockMaster()));
-      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE)).thenReturn(priceResponse(CURRENT_PRICE));
+      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE))
+          .thenReturn(priceResponse(CURRENT_PRICE));
 
       assertThatThrownBy(
-              () -> orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null)))
+              () ->
+                  orderService.createOrder(
+                      USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null)))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_001));
+          .satisfies(
+              e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_001));
     }
 
     @Test
@@ -274,14 +306,19 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       when(accountValidator.validateOwner(USER_ID, ACCOUNT_ID)).thenReturn(acc);
       when(stockMasterRepository.findById(STOCK_CODE)).thenReturn(Optional.of(stockMaster()));
-      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE)).thenReturn(priceResponse(CURRENT_PRICE));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE))
+          .thenReturn(priceResponse(CURRENT_PRICE));
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(
-              () -> orderService.createOrder(USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.MARKET, 10, null)))
+              () ->
+                  orderService.createOrder(
+                      USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.MARKET, 10, null)))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_002));
+          .satisfies(
+              e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_002));
     }
 
     @Test
@@ -290,14 +327,19 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       when(accountValidator.validateOwner(USER_ID, ACCOUNT_ID)).thenReturn(acc);
       when(stockMasterRepository.findById(STOCK_CODE)).thenReturn(Optional.of(stockMaster()));
-      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE)).thenReturn(priceResponse(CURRENT_PRICE));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockPriceHistoryService.getCurrentPrice(STOCK_CODE))
+          .thenReturn(priceResponse(CURRENT_PRICE));
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(holding(5, new BigDecimal("60000"))));
 
       assertThatThrownBy(
-              () -> orderService.createOrder(USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.MARKET, 10, null)))
+              () ->
+                  orderService.createOrder(
+                      USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.MARKET, 10, null)))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_002));
+          .satisfies(
+              e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_002));
     }
   }
 
@@ -314,7 +356,8 @@ class OrderServiceTest {
     void marketBuy_immediateExecution() {
       SecuritiesAccount acc = account(new BigDecimal("1000000"));
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.empty());
 
       OrderCreateResponse response =
@@ -323,7 +366,8 @@ class OrderServiceTest {
       assertThat(response.getStatus()).isEqualTo(OrderStatus.FILLED);
       assertThat(response.getFilledQuantity()).isEqualTo(10);
       assertThat(response.getRemainingQuantity()).isEqualTo(0);
-      assertThat(acc.getCashBalance()).isEqualByComparingTo(new BigDecimal("300000")); // 1,000,000 - 700,000
+      assertThat(acc.getCashBalance())
+          .isEqualByComparingTo(new BigDecimal("300000")); // 1,000,000 - 700,000
       verify(stockExecutionRepository).save(any(StockExecution.class));
       verify(stockHoldingRepository).save(any(StockHolding.class));
     }
@@ -334,13 +378,15 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("2000000"));
       StockHolding existingHolding = holding(10, new BigDecimal("10000"));
       mockBaseSetup(acc, new BigDecimal("20000"));
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(existingHolding));
 
       orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.MARKET, 10, null));
 
       assertThat(existingHolding.getHoldingQuantity()).isEqualTo(20);
-      assertThat(existingHolding.getAveragePurchasePrice()).isEqualByComparingTo(new BigDecimal("15000"));
+      assertThat(existingHolding.getAveragePurchasePrice())
+          .isEqualByComparingTo(new BigDecimal("15000"));
     }
 
     @Test
@@ -349,7 +395,8 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       StockHolding existingHolding = holding(20, new BigDecimal("60000"));
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(existingHolding));
 
       OrderCreateResponse response =
@@ -367,7 +414,8 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("0"));
       StockHolding existingHolding = holding(10, new BigDecimal("60000"));
       mockBaseSetup(acc, CURRENT_PRICE);
-      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(eq(ACCOUNT_ID), eq(STOCK_CODE)))
+      when(stockHoldingRepository.findBySecuritiesAccountIdAndStockCode(
+              eq(ACCOUNT_ID), eq(STOCK_CODE)))
           .thenReturn(Optional.of(existingHolding));
 
       orderService.createOrder(USER_ID, ACCOUNT_ID, sellRequest(OrderMethod.MARKET, 10, null));
@@ -382,7 +430,8 @@ class OrderServiceTest {
       SecuritiesAccount acc = account(new BigDecimal("1000000"));
       mockBaseSetup(acc, new BigDecimal("70000"));
 
-      orderService.createOrder(USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
+      orderService.createOrder(
+          USER_ID, ACCOUNT_ID, buyRequest(OrderMethod.LIMIT, 10, new BigDecimal("65000")));
 
       verify(stockExecutionRepository, never()).save(any());
       verify(stockHoldingRepository, never()).save(any());
@@ -439,7 +488,8 @@ class OrderServiceTest {
 
       assertThatThrownBy(() -> orderService.cancelOrder(USER_ID, 1L))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_004));
+          .satisfies(
+              e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_004));
     }
 
     @Test
@@ -449,7 +499,8 @@ class OrderServiceTest {
 
       assertThatThrownBy(() -> orderService.cancelOrder(USER_ID, 999L))
           .isInstanceOf(GlobalException.class)
-          .satisfies(e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_003));
+          .satisfies(
+              e -> assertThat(((GlobalException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_003));
     }
   }
 }

@@ -90,7 +90,6 @@ public class ReconciliationScheduler {
             .durationMs(durationMs)
             .build());
 
-    log.info(
-        "[정합성] 일일 정합성 검증 완료 status={} total={} durationMs={}", status, total, durationMs);
+    log.info("[정합성] 일일 정합성 검증 완료 status={} total={} durationMs={}", status, total, durationMs);
   }
 }

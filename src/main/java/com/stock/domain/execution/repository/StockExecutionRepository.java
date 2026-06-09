@@ -34,8 +34,8 @@ public interface StockExecutionRepository extends JpaRepository<StockExecution, 
       Pageable pageable);
 
   /**
-   * 체결-보유 정합성 검증: (account, stock) 단위 BUY/SELL 순수량 집계
-   * row: [securities_account_id, stock_code, net_qty]
+   * 체결-보유 정합성 검증: (account, stock) 단위 BUY/SELL 순수량 집계 row: [securities_account_id, stock_code,
+   * net_qty]
    */
   @Query(
       value =

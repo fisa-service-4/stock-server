@@ -66,15 +66,13 @@ public class ReconciliationService {
       int holdingQty = holdingMap.getOrDefault(key, 0);
       if (execNet != holdingQty) {
         mismatch++;
-        log.warn(
-            "[정합성] 체결-보유 수량 불일치 key={} execNet={} holdingQty={}", key, execNet, holdingQty);
+        log.warn("[정합성] 체결-보유 수량 불일치 key={} execNet={} holdingQty={}", key, execNet, holdingQty);
       }
     }
     for (Map.Entry<String, Integer> entry : holdingMap.entrySet()) {
       if (!executionNetMap.containsKey(entry.getKey()) && entry.getValue() > 0) {
         mismatch++;
-        log.warn(
-            "[정합성] 체결 기록 없는 보유 종목 key={} holdingQty={}", entry.getKey(), entry.getValue());
+        log.warn("[정합성] 체결 기록 없는 보유 종목 key={} holdingQty={}", entry.getKey(), entry.getValue());
       }
     }
     return mismatch;
