@@ -55,7 +55,10 @@ public class StockPriceHistorySeedRunner implements ApplicationRunner {
 
     for (String stockCode : stockCodes) {
       if (Thread.currentThread().isInterrupted()) {
-        log.warn("[SeedRunner] 인터럽트 감지 — 시드 중단 (processed={}/{})", successCount + skipCount + failCount, stockCodes.size());
+        log.warn(
+            "[SeedRunner] 인터럽트 감지 — 시드 중단 (processed={}/{})",
+            successCount + skipCount + failCount,
+            stockCodes.size());
         break;
       }
       try {
