@@ -141,6 +141,21 @@ public class OrderService {
     return OrderCancelResponse.from(order, cancelledQuantity);
   }
 
+  @Transactional
+  public void executePendingOrder(Long orderId, BigDecimal currentPrice) {
+    StockOrder order = stockOrderRepository.findById(orderId).orElse(null);
+    if (order == null || order.getOrderStatus() != OrderStatus.REQUESTED) {
+      return;
+    }
+
+    SecuritiesAccount account =
+        securitiesAccountRepository
+            .findById(order.getSecuritiesAccountId())
+            .orElseThrow(() -> new GlobalException(ErrorCode.ACCOUNT_001));
+
+    tryExecute(order, account, currentPrice);
+  }
+
   // ──────────────────────────────────────────────────────────
   // private
   // ──────────────────────────────────────────────────────────
