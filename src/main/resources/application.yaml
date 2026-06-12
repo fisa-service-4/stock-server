@@ -35,6 +35,8 @@ stock:
   mock:
     enabled: true
     tick-interval: 5000
+  order:
+    match-interval: 5000
 
 kis:
   app-key: ${KIS_APP_KEY:}
