@@ -20,7 +20,7 @@ public class ReconciliationScheduler {
   private final ReconciliationService reconciliationService;
   private final ReconciliationResultRepository reconciliationResultRepository;
 
-  @Scheduled(cron = "0 0 0 * * *")
+  @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
   public void runDailyReconciliation() {
     LocalDateTime startedAt = LocalDateTime.now();
     LocalDate runDate = startedAt.toLocalDate();
