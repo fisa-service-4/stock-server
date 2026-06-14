@@ -18,7 +18,7 @@ public class PortfolioSnapshotScheduler {
   private final SecuritiesAccountRepository accountRepository;
   private final PortfolioSnapshotService snapshotService;
 
-  @Scheduled(cron = "0 0 0 * * *")
+  @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
   public void dailySnapshot() {
     List<SecuritiesAccount> accounts =
         accountRepository.findAllByAccountStatus(AccountStatus.ACTIVE);
