@@ -28,7 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -46,7 +48,9 @@ public class StockPriceHistoryService {
   @Autowired(required = false)
   private StockPriceProvider stockPriceProvider;
 
-  @Transactional
+  @Lazy @Autowired private StockPriceHistoryService self;
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void recordTick(String stockCode, BigDecimal newClose) {
     if (newClose == null) {
       log.warn("[StockPriceHistoryService] 전달된 현재가가 null입니다. stockCode={}", stockCode);
@@ -129,7 +133,7 @@ public class StockPriceHistoryService {
     if (!mockEnabled && stockPriceProvider != null) {
       try {
         BigDecimal realTimePrice = stockPriceProvider.getCurrentPrice(stockCode);
-        recordTick(stockCode, realTimePrice);
+        self.recordTick(stockCode, realTimePrice);
       } catch (Exception e) {
         log.warn(
             "[{}] KIS 실시간 조회 실패, DB fallback 사용 stockCode={} error={}",

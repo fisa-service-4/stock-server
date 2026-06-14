@@ -23,6 +23,8 @@ public interface StockOrderRepository extends JpaRepository<StockOrder, Long> {
   Page<StockOrder> findBySecuritiesAccountIdAndOrderStatusAndOrderType(
       Long securitiesAccountId, OrderStatus orderStatus, OrderType orderType, Pageable pageable);
 
+  List<StockOrder> findByOrderStatus(OrderStatus orderStatus, Pageable pageable);
+
   /** 주문-체결 수량 정합성 검증: filled != SUM(executed) 또는 filled > quantity */
   @Query(
       """
