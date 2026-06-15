@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 
 public interface SecuritiesAccountRepository extends JpaRepository<SecuritiesAccount, Long> {
 
@@ -21,4 +22,7 @@ public interface SecuritiesAccountRepository extends JpaRepository<SecuritiesAcc
 
   Optional<SecuritiesAccount> findByBrokerCodeAndAccountNumber(
       String brokerCode, String accountNumber);
+
+  @Query("SELECT a FROM SecuritiesAccount a WHERE a.cashBalance < 0")
+  List<SecuritiesAccount> findAccountsWithNegativeCash();
 }

@@ -1,0 +1,273 @@
+# stock-test-spec
+
+stock-server 단위 테스트 전체 목록 및 검증 내용 정리.  
+총 **9개 파일 / 68개 케이스** — 전체 순수 단위 테스트 (DB·서버 미기동).
+
+---
+
+## 전체 요약
+
+| 파일 | 케이스 수 | 핵심 검증 영역 |
+|---|---|---|
+| `StockServerApplicationTests` | 1 | Spring 컨텍스트 로드 |
+| `AccountValidatorTest` | 3 | 계좌 소유자 검증 |
+| `SecuritiesAccountTest` | 4 | 예수금 입출금 엔티티 메서드 |
+| `StockHoldingTest` | 7 | 보유 종목 평단가·수량 계산 |
+| `CashServiceTest` | 7 | Saga 연동 예수금 입출금 서비스 |
+| `HoldingServiceTest` | 8 | 수익률 계산 로직 |
+| `PendingOrderSchedulerTest` | 5 | 미체결 주문 스케줄러 |
+| `ReconciliationServiceTest` | 15 | 5가지 정합성 검증 로직 |
+| `OrderServiceTest` | 18 | 주문 생성·체결·취소 핵심 흐름 |
+| **합계** | **68** | |
+
+---
+
+## 1. StockServerApplicationTests (1건)
+
+**위치:** `src/test/java/com/stock/StockServerApplicationTests.java`  
+**방식:** `@SpringBootTest` — 실제 컨텍스트 로드 검증
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `contextLoads` | 전체 Spring Bean 로드 성공 (DataSource·DataInitializer는 `@MockitoBean`으로 대체) |
+
+**특이사항:**
+- `spring.jpa.hibernate.ddl-auto=none`, `spring.sql.init.mode=never` 설정으로 DB 연결 없이 수행
+- `DataSource`, `DataInitializer`를 Mock 처리하여 Oracle 없이도 컨텍스트 로드 가능
+
+---
+
+## 2. AccountValidatorTest (3건)
+
+**위치:** `src/test/java/com/stock/domain/account/validator/AccountValidatorTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` 단위 테스트
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `validateOwner_success_returnsAccount` | 계좌 존재 + `userId` 일치 → `SecuritiesAccount` 반환 |
+| 2 | `validateOwner_accountNotFound_throws_ACCOUNT_001` | 계좌 미존재 → `ACCOUNT_001` 예외 |
+| 3 | `validateOwner_wrongOwner_throws_ACCOUNT_002` | 타인 계좌 접근 → `ACCOUNT_002` 예외 |
+
+**핵심:** 주문·조회 모든 API의 계좌 접근 전 공통 게이트웨이. 두 예외 경로 모두 검증.
+
+---
+
+## 3. SecuritiesAccountTest (4건)
+
+**위치:** `src/test/java/com/stock/domain/account/entity/SecuritiesAccountTest.java`  
+**방식:** 외부 의존 없는 순수 엔티티 메서드 테스트
+
+### deposit() — 입금
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `deposit_increasesBothBalances` | `cashBalance`와 `withdrawableBalance` 모두 amount만큼 증가 |
+| 2 | `deposit_fromZeroBalance` | 잔액 0인 계좌에 입금 → amount가 그대로 반영 |
+
+### withdraw() — 출금
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 3 | `withdraw_decreasesBothBalances` | `cashBalance`와 `withdrawableBalance` 모두 amount만큼 감소 |
+| 4 | `withdraw_exactBalance_resultZero` | 잔액 == 출금액 경계값 → 잔액 0 (경계값 케이스) |
+
+---
+
+## 4. StockHoldingTest (7건)
+
+**위치:** `src/test/java/com/stock/domain/holding/entity/StockHoldingTest.java`  
+**방식:** 순수 엔티티 메서드 테스트 — 금융 계산 정확도 검증
+
+### buy() — 추가 매수 시 평단가 재계산
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `buy_recalculatesAvgPrice` | 10주@10,000 + 20주@20,000 → 30주, 평단가 16,667 (HALF_UP 반올림) |
+| 2 | `buy_evenAvgPrice` | 10주@10,000 + 10주@20,000 → 20주, 평단가 15,000 (소수점 없는 케이스) |
+| 3 | `buy_updatesTotalPurchaseAmount` | `totalPurchaseAmount = avgPrice × newQuantity` 갱신 확인 |
+| 4 | `buy_roundsInputPriceHalfUp` | 소수점 있는 가격 입력 시 HALF_UP 반올림 적용 |
+
+### sell() — 매도 시 수량 감소
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 5 | `sell_partialQuantity` | 20주 중 10주 매도 → 10주 잔존 |
+| 6 | `sell_updatesTotalPurchaseAmount` | 매도 후 `totalPurchaseAmount = avgPrice × 잔여수량` |
+| 7 | `sell_allQuantity_resultZero` | 전량 매도 → `quantity=0`, `totalPurchaseAmount=0` |
+
+**핵심:** 평단가 재계산은 체결 엔진의 핵심 금융 로직. HALF_UP 반올림 정책 검증 포함.
+
+---
+
+## 5. CashServiceTest (7건)
+
+**위치:** `src/test/java/com/stock/domain/account/service/CashServiceTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` — `SecuritiesAccountRepository` Mock
+
+Saga 연동 인바운드 API (`POST /accounts/cash/deposit`, `POST /accounts/cash/withdraw`) 서비스 검증.
+
+### deposit() — 예수금 입금
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `deposit_success` | 정상 입금 — `cashBalance` 증가, 응답값 확인 |
+| 2 | `deposit_accountNotFound_throws_ACCOUNT_001` | 계좌 미존재 → `ACCOUNT_001` |
+| 3 | `deposit_wrongOwner_throws_ACCOUNT_002` | `userId` 불일치 → `ACCOUNT_002` |
+
+### withdraw() — 예수금 출금
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 4 | `withdraw_success` | 정상 출금 — `cashBalance` 감소 |
+| 5 | `withdraw_exactBalance_succeeds` | 잔액 == 출금액 경계값 → 성공, 잔액 0 |
+| 6 | `withdraw_insufficientBalance_throws_TRANSFER_002` | 잔액 부족 → `TRANSFER_002` |
+| 7 | `withdraw_accountNotFound_throws_ACCOUNT_001` | 계좌 미존재 → `ACCOUNT_001` |
+
+---
+
+## 6. HoldingServiceTest (8건)
+
+**위치:** `src/test/java/com/stock/domain/holding/service/HoldingServiceTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` — Repository 4개 Mock
+
+`getReturns()` — 수익률 계산 로직 검증 (월별·연간 수익률 미구현으로 일간+총수익률만 테스트).
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `emptyHoldings_returnsZeroRates` | 보유 종목 없음 → `totalReturnRate=0`, `dailyReturnRate=null` |
+| 2 | `currentPriceEqualToAvg_zeroReturnRate` | 현재가 == 평균단가 → `totalReturnRate=0` |
+| 3 | `priceUp10Percent_totalReturnRateIs10` | 현재가 10% 상승 → `totalReturnRate=10.00` |
+| 4 | `priceDown10Percent_totalReturnRateIsNegative` | 현재가 10% 하락 → `totalReturnRate=-10.00` |
+| 5 | `nullTotalPurchaseAmount_fallbackToAvgTimesQuantity` | `totalPurchaseAmount=null` → `avgPrice×quantity` 폴백 계산 |
+| 6 | `noPriceHistory_fallbackToAvgPrice_zeroReturn` | 시세 데이터 없음 → 평균단가를 현재가로 간주, 손익 0 |
+| 7 | `yesterdaySnapshot_dailyReturnRateCalculated` | 전날 스냅샷 있음 → `dailyReturnRate` 계산 (어제 대비 오늘 주식 평가액 변화율) |
+| 8 | `yesterdaySnapshotStockAssetZero_dailyReturnRateNull` | 전날 `stockAsset=0` → `dailyReturnRate=null` (0 나누기 방어) |
+
+**케이스 5 설명:** `StockHolding.totalPurchaseAmount`가 null인 레거시 데이터에 대한 방어 로직.  
+**케이스 6 설명:** 시세 미수집 종목은 손실 없는 것으로 처리 (보수적 방어).
+
+---
+
+## 7. PendingOrderSchedulerTest (5건)
+
+**위치:** `src/test/java/com/stock/domain/order/scheduler/PendingOrderSchedulerTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` — `StockOrderRepository`, `StockPriceHistoryService`, `OrderService` Mock
+
+5초 주기로 `REQUESTED` 상태의 미체결 지정가 주문을 재시도하는 스케줄러 검증.
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `noPendingOrders_earlyReturn` | 미체결 주문 없음 → 가격 조회·체결 시도 없이 조기 종료 |
+| 2 | `pendingOrders_sameStock_fetchesPriceOnce_executesTwice` | 동일 종목 주문 2건 → 가격 조회 1회, 체결 시도 2회 (중복 조회 방지) |
+| 3 | `pendingOrders_differentStocks_eachFetchedAndExecuted` | 다른 종목 주문 2건 → 종목별 독립 가격 조회 및 체결 |
+| 4 | `priceServiceThrows_skipsThatStock_continuesOthers` | 종목 A 가격 조회 실패 → A 주문 전체 skip, 종목 B 정상 처리 |
+| 5 | `firstOrderExecutionFails_continuesWithSecondOrder` | 첫 번째 주문 체결 실패 → 예외 삼키고 두 번째 주문 계속 처리 |
+
+**핵심:** 케이스 4·5는 장애 격리(독립 try-catch) 검증 — 한 주문·종목의 실패가 전체를 멈추지 않음을 보장.
+
+---
+
+## 8. ReconciliationServiceTest (15건)
+
+**위치:** `src/test/java/com/stock/domain/reconciliation/service/ReconciliationServiceTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` — Repository 4개 Mock
+
+매일 자정 실행되는 5가지 정합성 검증 메서드 검증.
+
+### checkOrderExecutionConsistency — 주문-체결 수량 정합성
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `noMismatch_returnsZero` | 불일치 없음 → 0 반환 |
+| 2 | `twoMismatches_returnsTwo` | 불일치 2건 → 2 반환 |
+
+### checkHoldingConsistency — 체결-보유 수량 정합성
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 3 | `allMatch_returnsZero` | 체결 순수량 == 보유수량 → 0 반환 |
+| 4 | `executionAndHoldingDiffer_countsMismatch` | 체결 순수량(10) ≠ 보유수량(8) → 1 반환 |
+| 5 | `holdingWithNoExecution_positiveSQuantity_countsMismatch` | 체결 없는데 보유수량 양수 → 1 반환 |
+| 6 | `holdingWithNoExecution_zeroQuantity_isOk` | 체결 없고 보유수량 0 → 0 반환 (정상) |
+| 7 | `noDataAtAll_returnsZero` | 체결·보유 데이터 없음 → 0 반환 |
+| 8 | `partialMismatch_returnsCorrectCount` | 두 종목 중 한 종목만 불일치 → 1 반환 |
+
+### checkOrderStatusConsistency — 주문 상태-수량 정합성
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 9 | `noMismatch_returnsZero` | 불일치 없음 → 0 반환 |
+| 10 | `oneMismatch_returnsOne` | 상태-수량 불일치 1건 → 1 반환 |
+
+### checkCashBalance — 예수금 음수 탐지
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 11 | `noNegativeCash_returnsZero` | 음수 예수금 계좌 없음 → 0 반환 |
+| 12 | `hasNegativeCash_returnsCount` | 음수 예수금 계좌 존재 → 해당 건수 반환 |
+
+### checkHoldingIntegrity — 보유수량 음수 탐지
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 13 | `noNegativeHolding_returnsZero` | 음수 보유수량 없음 → 0 반환 |
+| 14 | `hasNegativeHolding_returnsCount` | 음수 보유수량 종목 존재 → 해당 건수 반환 |
+
+**특이사항 (케이스 11·13):** 예수금·보유수량 음수는 `ReconciliationStatus.ERROR`를 유발하는 가장 심각한 이상 상태. 탐지 시 `log.error` 발생.
+
+---
+
+## 9. OrderServiceTest (18건)
+
+**위치:** `src/test/java/com/stock/domain/order/service/OrderServiceTest.java`  
+**방식:** `@ExtendWith(MockitoExtension.class)` — Repository 6개 + Service 2개 Mock
+
+주문 생성·체결·취소 전체 흐름 검증. 가장 복잡한 핵심 비즈니스 로직.
+
+### isExecutable — 체결 조건 판단
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 1 | `market_alwaysExecutes` | MARKET 주문 → 항상 즉시 FILLED |
+| 2 | `limitBuy_executes_whenCurrentPriceLe` | LIMIT BUY — 현재가(63,000) ≤ 지정가(65,000) → 즉시 FILLED |
+| 3 | `limitBuy_staysRequested_whenCurrentPriceExceeds` | LIMIT BUY — 현재가(70,000) > 지정가(65,000) → REQUESTED 유지 |
+| 4 | `limitSell_executes_whenCurrentPriceGe` | LIMIT SELL — 현재가(72,000) ≥ 지정가(70,000) → 즉시 FILLED |
+| 5 | `limitSell_staysRequested_whenCurrentPriceBelow` | LIMIT SELL — 현재가(68,000) < 지정가(70,000) → REQUESTED 유지 |
+
+### validateOrderCondition — 주문 조건 검증
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 6 | `buy_passes_whenSufficientBalance` | 잔액(1,000,000) > 주문금액(700,000) → 통과 |
+| 7 | `buy_passes_atExactBalance` | 잔액(700,000) == 주문금액(700,000) 경계값 → 통과 |
+| 8 | `buy_throws_ORDER_001` | 잔액(100,000) < 주문금액(700,000) → `ORDER_001` |
+| 9 | `sell_throws_ORDER_002_whenNoHolding` | 보유 종목 없음 → `ORDER_002` |
+| 10 | `sell_throws_ORDER_002_whenInsufficientHolding` | 보유(5주) < 주문(10주) → `ORDER_002` |
+
+### createOrder — 체결 후 상태 검증
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 11 | `marketBuy_immediateExecution` | MARKET BUY 체결 → FILLED, filledQty=10, remainingQty=0, cashBalance 차감 확인 |
+| 12 | `marketBuy_recalculatesAvgPrice` | 기존 10주@10,000 + 신규 10주@20,000 → 20주, 평단가 15,000 |
+| 13 | `marketSell_immediateExecution` | MARKET SELL → holding 20→10주, cashBalance 0→700,000 |
+| 14 | `marketSell_fullQuantity_deletesHolding` | 전량 매도 → `StockHolding.delete()` 호출 확인 |
+| 15 | `limitBuy_notExecutable_noSideEffects` | LIMIT BUY 조건 미충족 → execution·holding·cashBalance 변동 없음 |
+
+### cancelOrder — 주문 취소
+
+| # | 테스트명 | 검증 내용 |
+|---|---|---|
+| 16 | `cancel_requested_succeeds` | REQUESTED 주문 취소 → CANCELLED, `OrderModificationHistory` 저장 |
+| 17 | `cancel_filled_throws_ORDER_004` | FILLED 주문 취소 시도 → `ORDER_004` |
+| 18 | `cancel_notFound_throws_ORDER_003` | 없는 주문 취소 시도 → `ORDER_003` |
+
+---
+
+## 테스트 설계 원칙
+
+- **단위 테스트 전용:** 모든 테스트는 `@ExtendWith(MockitoExtension.class)` 기반. 외부 DB·서버 미기동.
+- **경계값 케이스 포함:** 잔액 == 주문금액, 전량 매도, 0 잔액 등 경계값 케이스를 명시적으로 테스트.
+- **장애 격리 검증:** 스케줄러 테스트에서 한 항목 실패 시 나머지 처리 계속 여부를 명시적으로 검증.
+- **금전 계산 정밀도:** `BigDecimal.isEqualByComparingTo()` 사용으로 소수점 스케일 차이 무관하게 값 비교.
+- **`@GeneratedValue` PK 주입:** JPA auto-increment 필드는 `ReflectionTestUtils.setField()`로 직접 주입.

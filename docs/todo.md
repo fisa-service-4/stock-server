@@ -198,3 +198,34 @@
 - [x] `application.yaml` — `kis:` 블록 추가 (환경변수 바인딩)
 - [x] `application-onpremise.yaml` — `mock.enabled=false`, `kis:` 설정
 - [x] Real 모드 기동 후 실제 주가 응답 확인
+
+---
+
+## ✅ 일일 정합성 검증 스케줄러 (Reconciliation)
+
+> 매일 자정 증권 원장 정합성 자동 검증. 결과를 `RECONCILIATION_RESULT` 테이블에 저장.
+
+### ✅ Issue C — `feat`: 정합성 검증 스케줄러 구현 (완료)
+
+- [x] `ReconciliationStatus` enum (`OK` / `WARN` / `ERROR`)
+- [x] `ReconciliationResult` 엔티티 (`RECONCILIATION_RESULT` 테이블 자동 생성)
+  - [x] `run_date`, `*_mismatch_count` 5종, `total_mismatch_count`, `status`
+  - [x] `started_at` / `completed_at` / `duration_ms` (소요시간 추적)
+  - [x] `@PrePersist` 기반 `created_at` (BaseEntity 미사용, 불변 레코드)
+- [x] `ReconciliationResultRepository` (JpaRepository)
+- [x] Repository 쿼리 추가
+  - [x] `StockOrderRepository.findOrdersWithExecutionMismatch()` — JPQL COALESCE 서브쿼리
+  - [x] `StockOrderRepository.findOrdersWithStatusInconsistency()` — FILLED/PARTIAL_FILLED/REQUESTED 상태-수량 불일치
+  - [x] `StockExecutionRepository.findNetQuantityPerAccountAndStock()` — Native SQL GROUP BY JOIN
+  - [x] `StockHoldingRepository.findHoldingsWithNegativeQuantity()`
+  - [x] `SecuritiesAccountRepository.findAccountsWithNegativeCash()`
+- [x] `ReconciliationService` — 5개 검증 메서드 (`@Transactional(readOnly = true)`)
+  - [x] `checkOrderExecutionConsistency()` — 주문-체결 수량 정합성
+  - [x] `checkHoldingConsistency()` — 체결-보유 수량 정합성 (Map 비교)
+  - [x] `checkOrderStatusConsistency()` — 주문 상태-수량 정합성
+  - [x] `checkCashBalance()` — 예수금 음수 탐지 (log.error)
+  - [x] `checkHoldingIntegrity()` — 보유수량 음수 탐지 (log.error)
+- [x] `ReconciliationScheduler` — `@Scheduled(cron = "0 0 0 * * *")` 매일 자정
+  - [x] 검증 항목별 독립 try-catch (1개 실패가 전체 차단 방지)
+  - [x] status 결정: `cashMismatch > 0 || holdingMismatch > 0` → ERROR / `total > 0` → WARN / 0 → OK
+  - [x] `startedAt` / `completedAt` / `durationMs` 측정 후 `ReconciliationResult` 저장
